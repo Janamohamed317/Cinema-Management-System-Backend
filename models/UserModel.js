@@ -32,7 +32,7 @@ const UserSchema = new mongoose.Schema({
             "USER",
             "TICKETS_MANAGER",
             "SNACKS_MANAGER",
-            "EMPLOYEE"
+            "UNASSIGNED"
         ],
     },
 },
@@ -47,6 +47,12 @@ function validatUserCreation(obj) {
         email: Joi.string().required(),
         password: Joi.string().required().min(8).max(20),
         username: Joi.string().required().min(3),
+        role: Joi.string().valid(
+            "SUPER_ADMIN",
+            "USER",
+            "TICKETS_MANAGER",
+            "SNACKS_MANAGER",
+            "UNASSIGNED")
     });
 
     return schema.validate(obj);

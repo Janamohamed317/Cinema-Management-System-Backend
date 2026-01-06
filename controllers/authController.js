@@ -37,8 +37,6 @@ const signin = asyncHandler(async (req, res) => {
     const { email, password } = req.body
 
     const user = await checkUserExistance(email)
-    console.log(user);
-
 
     let isMatched = false
 
@@ -61,6 +59,9 @@ const signin = asyncHandler(async (req, res) => {
 })
 
 const EmployeeRegister = asyncHandler(async (req, res) => {
+    const { error } = validatUserCreation(req.body)
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
     const { email, username, password } = req.body
     const user = await checkEmailExistance(email)
     if (user) {
@@ -72,7 +73,7 @@ const EmployeeRegister = asyncHandler(async (req, res) => {
         email,
         username,
         password: hashedPassword,
-        role: "USER"
+        role: "UNASSIGNED"
     })
     await newUser.save()
     const token = tokenCreation(newUser)
