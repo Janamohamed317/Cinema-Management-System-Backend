@@ -1,17 +1,20 @@
-const { User, validatUserCreation, validatLogin } = require("../models/UserModel")
-const { checkUserExistance, comparePassword, sendVerificationEmail, checkEmailExistance } = require("../services/authServices")
+const { User } = require("../models/UserModel")
+const { comparePassword, sendVerificationEmail } = require("../services/authServices")
 const asyncHandler = require("express-async-handler")
 const { hashPassword } = require("../utils/hash")
 const { tokenCreation } = require("../utils/tokenCreation")
+const { findUserByEmailOrUsername, checkEmailExistance } = require("../services/userServices")
+const { validateUserCreation, validateLogin } = require("../utils/validations/userValidations")
+
 
 const signup = asyncHandler(async (req, res) => {
-    const { error } = validatUserCreation(req.body)
+    const { error } = validateUserCreation(req.body)
     const { email, username, password } = req.body
 
     if (error) return res.status(400).json({ message: error.details[0].message });
 
 
-    const user = await checkUserExistance(email, username)
+    const user = await findUserByEmailOrUsername(email, username)
     if (user) {
         return res.status(409).json({ message: "User Already exist" })
     }
@@ -30,13 +33,13 @@ const signup = asyncHandler(async (req, res) => {
 })
 
 const signin = asyncHandler(async (req, res) => {
-    const { error } = validatLogin(req.body)
+    const { error } = validateLogin(req.body)
 
     if (error) return res.status(400).json({ message: error.details[0].message });
 
     const { email, password } = req.body
 
-    const user = await checkUserExistance(email)
+    const user = await checkEmailExistance(email)
 
     let isMatched = false
 
@@ -46,11 +49,10 @@ const signin = asyncHandler(async (req, res) => {
     if (!isMatched || !user) {
         return res.status(404).json({ message: "Email or Password is incorrect" })
     }
-    if (!user.verified) {
-        sendVerificationEmail()
-        return res.status(400).json({ message: "Email is not verified, please check your email" })
-
-    }
+    // if (!user.verified) {
+    //     sendVerificationEmail()
+    //     return res.status(400).json({ message: "Email is not verified, please check your email" })
+    // }
 
     const token = tokenCreation(user)
     return res.status(200).json({ userId: user._id, token })
@@ -58,32 +60,8 @@ const signin = asyncHandler(async (req, res) => {
 
 })
 
-const EmployeeRegister = asyncHandler(async (req, res) => {
-    const { error } = validatUserCreation(req.body)
-    if (error) return res.status(400).json({ message: error.details[0].message });
-
-    const { email, username, password } = req.body
-    const user = await checkEmailExistance(email)
-    if (user) {
-        return res.status(409).json({ message: "Employee Already exist" })
-    }
-    const hashedPassword = await hashPassword(password)
-
-    const newUser = new User({
-        email,
-        username,
-        password: hashedPassword,
-        role: "UNASSIGNED"
-    })
-    await newUser.save()
-    const token = tokenCreation(newUser)
-    return res.status(201).json({ newUser, token })
-})
-
 
 module.exports = {
     signin,
     signup,
-    EmployeeRegister
-
 }
