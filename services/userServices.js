@@ -1,7 +1,15 @@
-const { User } = require("../models/UserModel");
+const { PrismaClient } = require('../generated/prisma');
+const prisma = new PrismaClient();
 
 const findUserByEmailOrUsername = async (email, username) => {
-    const user = await User.findOne({ $or: [{ email: email }, { username: username }] });
+    const user = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { email: email },
+                { username: username }
+            ]
+        }
+    })
     if (user) {
         return user
     }
@@ -9,7 +17,7 @@ const findUserByEmailOrUsername = async (email, username) => {
 }
 
 const checkEmailExistance = async (email) => {
-    const user = await User.findOne({ email: email });
+    const user = await prisma.user.findFirst({ where: { email: email } })
     if (user) {
         return user
     }
