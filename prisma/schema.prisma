@@ -14,16 +14,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model User {
-  id        Int       @id @default(autoincrement())
+  id        String    @id @default(uuid())
   createdAt DateTime  @default(now())
   email     String    @unique
   username  String    @unique
   password  String
   role      Role      @default(USER)
   verified  Boolean   @default(false)
-  deleted   Boolean   @default(false)
+  deletedAt DateTime?
+
+  @@index([deletedAt])
 }
 
 enum Role {
@@ -31,33 +32,42 @@ enum Role {
   USER
   TICKETS_MANAGER
   SNACKS_MANAGER
+  MOVIES_MANAGER
   EMPLOYEE
   UNASSIGNED
 }
 
-
 model Movie {
-  id         Int         @id @default(autoincrement())
+  id         String      @id @default(uuid())
   createdAt  DateTime    @default(now())
   name       String      @unique
   duration   Int
+  deletedAt  DateTime?
   screenings Screening[]
+
+  @@index([deletedAt])
 }
 
 model Hall {
-  id         Int         @id @default(autoincrement())
+  id         String      @id @default(uuid())
   name       String      @unique
   type       String
   seats      Int
+  deletedAt  DateTime?
   screenings Screening[]
+
+  @@index([deletedAt])
 }
 
 model Screening {
-  id        Int      @id @default(autoincrement())
-  movie     Movie    @relation(fields: [movieId], references: [id])
-  hall      Hall     @relation(fields: [hallId], references: [id])
-  movieId   Int
+  id        String    @id @default(uuid())
+  movie     Movie     @relation(fields: [movieId], references: [id])
+  hall      Hall      @relation(fields: [hallId], references: [id])
+  movieId   String
   startTime DateTime
   endTime   DateTime
-  hallId    Int
+  deletedAt DateTime?
+  hallId    String
+
+  @@index([deletedAt])
 }

@@ -4,9 +4,9 @@ const prisma = new PrismaClient();
 const findMovieByName = async (name) => {
     const movie = await prisma.movie.findFirst({ where: { name } })
     if (movie) {
-        return true
+        return movie
     }
-    return false
+    return null
 }
 
 const findMovieById = async (id) => {

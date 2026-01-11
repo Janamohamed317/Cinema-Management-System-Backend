@@ -6,7 +6,7 @@ function validateUserCreation(obj) {
         email: Joi.string().required(),
         password: Joi.string().required().min(8).max(20),
         username: Joi.string().required().min(3),
-        role: Joi.string().valid("USER",)
+        role: Joi.string().valid("USER")
     });
 
     return schema.validate(obj);

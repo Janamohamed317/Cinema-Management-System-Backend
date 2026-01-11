@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const { hashPassword } = require("../utils/hash");
-const { validateAssignedEmployee } = require("../utils/validations/adminValidations");
+const { validateAssignedEmployee } = require("../utils/validations/EmployeeManagementValidations");
 const { validateUserCreation } = require("../utils/validations/userValidations");
 const { checkEmailExistance } = require("../services/userServices");
 const { PrismaClient } = require('../generated/prisma');
