@@ -14,6 +14,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  SUPER_ADMIN
+  HALL_MANAGER
+  USER
+  TICKETS_MANAGER
+  SNACKS_MANAGER
+  MOVIES_MANAGER
+  UNASSIGNED
+}
+
+enum HallType {
+  REGULAR
+  VIP
+}
+
+enum ScreenType {
+  TWO_D
+  THREE_D
+  IMAX
+  SCREEN_X
+}
+
 model User {
   id        String    @id @default(uuid())
   createdAt DateTime  @default(now())
@@ -25,16 +47,6 @@ model User {
   deletedAt DateTime?
 
   @@index([deletedAt])
-}
-
-enum Role {
-  SUPER_ADMIN
-  USER
-  TICKETS_MANAGER
-  SNACKS_MANAGER
-  MOVIES_MANAGER
-  EMPLOYEE
-  UNASSIGNED
 }
 
 model Movie {
@@ -51,7 +63,8 @@ model Movie {
 model Hall {
   id         String      @id @default(uuid())
   name       String      @unique
-  type       String
+  type       HallType
+  screenType ScreenType
   seats      Int
   deletedAt  DateTime?
   screenings Screening[]

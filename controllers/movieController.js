@@ -30,12 +30,12 @@ const addMovie = asyncHandler(async (req, res) => {
         data: { name, duration },
     });
 
-    return res.status(201).json({ message: `${movieName} is Added Successfully` })
+    return res.status(201).json({ message: `${name} is Added Successfully` })
 
 })
 
 const deleteMovie = asyncHandler(async (req, res) => {
-    const { error } = validateMovieId(req.params)
+    const { error } = validateMovieId(req.params.id)
     if (error) return res.status(400).json({ message: error.details[0].message })
 
     const { id } = req.params
@@ -48,8 +48,8 @@ const deleteMovie = asyncHandler(async (req, res) => {
 })
 
 const editMovie = asyncHandler(async (req, res) => {
-    const { error } = validateMovieId(req.params)
-    if (error) return res.status(400).json({ message: error.details[0].message })
+    const { error: idError } = validateMovieId(req.params.id)
+    if (idError) return res.status(400).json({ message: error.details[0].message })
 
     const { id } = req.params
     const movie = await findMovieById(id)
@@ -57,10 +57,9 @@ const editMovie = asyncHandler(async (req, res) => {
         return res.status(404).json({ message: "Movie Not Found" })
     }
 
-    if (!error) {
-        const { error } = validateEditingMovie(req.body)
-        if (error) return res.status(400).json({ message: error.details[0].message })
-    }
+    const { error } = validateEditingMovie(req.body)
+    if (error) return res.status(400).json({ message: error.details[0].message })
+
     const { name, duration } = req.body
 
     await prisma.movie.update({ where: { id }, data: { name, duration } })
@@ -71,7 +70,7 @@ const editMovie = asyncHandler(async (req, res) => {
 })
 
 const restoreMovie = asyncHandler(async (req, res) => {
-    const { error } = validateMovieId(req.params)
+    const { error } = validateMovieId(req.params.id)
     if (error) return res.status(400).json({ message: error.details[0].message })
     const { id } = req.params
     const movie = await findMovieById(id)
@@ -80,9 +79,9 @@ const restoreMovie = asyncHandler(async (req, res) => {
         return res.status(404).json({ message: "Movie Not Found" })
     }
 
-    await prisma.movie.update({ where: { id }, data: { deletedAt: null } })
+    await prisma.movie.update({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } })
 
-    return res.status(200).json({ message: `${movie.name} is Restored Successfully` })
+    return res.status(200).json({ message: `Movie Restored Successfully` })
 })
 
 const getAllMovies = asyncHandler(async (req, res) => {

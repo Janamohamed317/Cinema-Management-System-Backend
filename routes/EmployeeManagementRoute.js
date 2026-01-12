@@ -1,5 +1,5 @@
 const express = require("express")
-const { EmployeeRegister, AssignRole } = require("../controllers/EmployeeManagementController.js")
+const { EmployeeRegister, AssignRole } = require("../controllers/employeeManagementController.js")
 const { verifyToken } = require("../middlewares/verifyToken.js")
 const { requireAdmin } = require("../middlewares/rolesMiddleware.js")
 const { addMovie } = require("../controllers/movieController.js")

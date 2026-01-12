@@ -5,6 +5,7 @@ function validateAssignedEmployee(obj) {
         userId: Joi.string().required(),
         role: Joi.string().valid(
             "SUPER_ADMIN",
+            "HALL_MANAGER",
             "MOVIES_MANAGER",
             "USER",
             "TICKETS_MANAGER",

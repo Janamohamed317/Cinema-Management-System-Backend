@@ -10,12 +10,11 @@ function validateAddingMovie(obj) {
 }
 
 
-function validateMovieId(obj) {
-    const schema = Joi.object({
-        id: Joi.string().required(),
-    });
-
-    return schema.validate(obj);
+function validateMovieId(id) {
+    return Joi.string()
+        .uuid()
+        .required()
+        .validate(id);
 }
 
 function validateEditingMovie(obj) {
