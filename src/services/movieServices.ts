@@ -34,7 +34,7 @@ export const softDeleteMovieById = async (id: string) => {
 
 export const editMovieById = async (id: string, data: MovieEditingBody) => {
     return await prisma.movie.update({
-        where: { id: id },
+        where: { id },
         data
     });
 }

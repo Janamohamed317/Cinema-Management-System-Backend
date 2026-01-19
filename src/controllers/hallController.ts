@@ -6,14 +6,14 @@ import { validateHallId, validateHallData, validateHallUpdate } from "../utils/v
 import { findHallByName, addHallService, softDeleteHallById, editHallById, restoreHallById, getAllActiveHalls, getHallConflictInfo }
     from "../services/hallServices"
 
-import { HallAddingBody, HallEditinggBody } from "../types/hall"
+import { HallAddingBody, HallEditingBody } from "../types/hall"
 
 
 export const addHall = asyncHandler(async (req: Request<{}, {}, HallAddingBody>, res: Response) => {
     const { error } = validateHallData(req.body)
 
     if (error) {
-        res.status(400).json({ message: error.details[0].message })        
+        res.status(400).json({ message: error.details[0].message })
         return
     }
 
@@ -64,7 +64,7 @@ export const deleteHall = asyncHandler(async (req: Request<{ id: string }>, res:
     return
 })
 
-export const editHall = asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
+export const editHall = asyncHandler(async (req: Request<{ id: string }, {}, HallEditingBody>, res: Response) => {
     const { error: idError } = validateHallId(req.params.id)
 
     if (idError) {
@@ -80,7 +80,7 @@ export const editHall = asyncHandler(async (req: Request<{ id: string }>, res: R
     }
 
     const { id } = req.params
-    const body = req.body as HallEditinggBody
+    const body = req.body 
 
     const result = await editHallById(id, body)
 

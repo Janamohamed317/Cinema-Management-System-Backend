@@ -7,7 +7,7 @@ export type HallAddingBody = {
     seats: number
 }
 
-export type HallEditinggBody = {
+export type HallEditingBody = {
     name?: string,
     type?: HallType,
     screenType?: ScreenType,

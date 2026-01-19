@@ -1,8 +1,8 @@
 import { Hall } from "../generated/prisma"
 import { prisma } from "../prismaClient/client"
-import { HallAddingBody, HallEditinggBody } from "../types/hall"
+import { HallAddingBody, HallEditingBody } from "../types/hall"
 
-export const findHallByName = async (name: string): Promise<Hall | null> => {
+export const findHallByName = async (name: string) => {
     const hall = await prisma.hall.findFirst({
         where: { name },
     })
@@ -14,7 +14,7 @@ export const findHallByName = async (name: string): Promise<Hall | null> => {
     return null
 }
 
-export const findHallById = async (id: string): Promise<Hall | null> => {
+export const findHallById = async (id: string) => {
     const hall = await prisma.hall.findFirst({
         where: { id },
     })
@@ -25,7 +25,6 @@ export const findHallById = async (id: string): Promise<Hall | null> => {
 
     return null
 }
-
 
 export const addHallService = async (data: HallAddingBody) => {
     return await prisma.hall.create({
@@ -45,7 +44,7 @@ export const softDeleteHallById = async (id: string) => {
     })
 }
 
-export const editHallById = async (id: string, data: HallEditinggBody) => {
+export const editHallById = async (id: string, data: HallEditingBody) => {
     return await prisma.hall.updateMany({
         where: {
             id,
