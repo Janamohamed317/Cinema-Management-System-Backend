@@ -1,14 +1,6 @@
-import {
-    addMovieService,
-    editMovieById,
-    findMovieById,
-    findMovieByName,
-    getMovieConflictInfo,
-    restoreMovieById,
-    softDeleteMovieById,
-} from "../../services/movieServices"
+import { addMovieService, editMovieById, findMovieById, findMovieByName, getMovieConflictInfo, restoreMovieById, softDeleteMovieById }
+    from "../../services/movieServices"
 import { prisma } from "../../prismaClient/client"
-import { Movie } from "../../generated/prisma"
 
 jest.mock("../../prismaClient/client")
 
@@ -68,7 +60,7 @@ describe("Movie Service Unit Tests", () => {
     describe("editMovieById", () => {
         it("updates movie name", async () => {
             const data = { name: "Inception 2" };
-            
+
             (prisma.movie.update as jest.Mock).mockResolvedValue({ id: "1", ...data })
 
             const result = await editMovieById("1", data)

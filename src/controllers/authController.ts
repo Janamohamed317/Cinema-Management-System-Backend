@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import { hashPassword } from "../utils/hash";
 import { tokenCreation } from "../utils/tokenCreation";
-import { findUserByEmailOrUsername, checkEmailExistance } from "../services/userServices";
+import { findUserByEmailOrUsername, checkEmailExistance, CreateUser } from "../services/userServices";
 import { validateUserCreation, validateLogin } from "../utils/validations/userValidations";
 import { PrismaClient, Role } from "../generated/prisma";
 import { UserRegisterationBody, UserSigninBody } from "../types/auth";
@@ -17,7 +16,7 @@ export const signup = asyncHandler(async (req: Request<{}, {}, UserRegisteration
         res.status(400).json({ message: error.details[0].message });
         return
     }
-    const { email, username, password } = req.body;
+    const { email, username} = req.body;
 
     const user = await findUserByEmailOrUsername(email, username);
     if (user) {
@@ -25,16 +24,7 @@ export const signup = asyncHandler(async (req: Request<{}, {}, UserRegisteration
         return
     }
 
-    const hashedPassword = await hashPassword(password);
-
-    const newUser = await prisma.user.create({
-        data: {
-            email,
-            username,
-            password: hashedPassword,
-            role: Role.USER,
-        },
-    });
+    const newUser = await CreateUser(req.body)
 
     const token = tokenCreation(newUser);
 

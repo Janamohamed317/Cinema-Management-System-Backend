@@ -1,5 +1,5 @@
 import Joi from "joi"
-import { HallAddingBody, HallEditinggBody } from "../../types/hall"
+import { HallAddingBody, HallEditingBody } from "../../types/hall"
 import { HallType, ScreenType } from "../../generated/prisma";
 
 export function validateHallData(obj: HallAddingBody) {
@@ -25,7 +25,7 @@ export function validateHallId(id: string) {
         .validate(id);
 }
 
-export function validateHallUpdate(obj: HallEditinggBody) {
+export function validateHallUpdate(obj: HallEditingBody) {
     const schema = Joi.object({
         name: Joi.string().min(2),
         type: Joi.string().valid(...Object.values(HallType)),
