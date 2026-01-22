@@ -121,7 +121,7 @@ describe("Hall Service Unit Tests", () => {
                 deletedAt: null
             },
             data: {
-                deletedAt: new Date(),
+                deletedAt: expect.any(Date),
             }
         })
 

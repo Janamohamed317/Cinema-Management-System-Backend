@@ -3,12 +3,8 @@ import asyncHandler from "express-async-handler";
 import { tokenCreation } from "../utils/tokenCreation";
 import { findUserByEmailOrUsername, checkEmailExistance, CreateUser } from "../services/userServices";
 import { validateUserCreation, validateLogin } from "../utils/validations/userValidations";
-import { PrismaClient, Role } from "../generated/prisma";
 import { UserRegisterationBody, UserSigninBody } from "../types/auth";
 import { comparePassword } from "../services/authServices";
-
-const prisma = new PrismaClient();
-
 
 export const signup = asyncHandler(async (req: Request<{}, {}, UserRegisterationBody>, res: Response) => {
     const { error } = validateUserCreation(req.body);
@@ -16,7 +12,7 @@ export const signup = asyncHandler(async (req: Request<{}, {}, UserRegisteration
         res.status(400).json({ message: error.details[0].message });
         return
     }
-    const { email, username} = req.body;
+    const { email, username } = req.body;
 
     const user = await findUserByEmailOrUsername(email, username);
     if (user) {
@@ -51,7 +47,7 @@ export const signin = asyncHandler(async (req: Request<{}, {}, UserSigninBody>, 
 
     const isMatched = await comparePassword(user, password);
     if (!isMatched) {
-        res.status(404).json({ message: "Email or Password is incorrect" });
+        res.status(401).json({ message: "Email or Password is incorrect" });
         return
     }
 

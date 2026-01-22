@@ -5,7 +5,6 @@ import { AssignRoleBody } from "../types/user";
 import { UserRegisterationBody } from "../types/auth";
 import { validateAssignedEmployee } from "../utils/validations/employeeManagementValidations";
 import { validateUserCreation } from "../utils/validations/userValidations";
-import { hashPassword } from "../utils/hash";
 import { assignRole, checkEmailExistance, CreateUser } from "../services/userServices";
 
 const prisma = new PrismaClient()
