@@ -1,5 +1,6 @@
 import { Request } from "express"
-import { Role } from "../generated/prisma"
+import { Role } from "@prisma/client"
+import { Role as RoleType } from "@prisma/client"
 
 export type UserRegisterationBody = {
     email: string

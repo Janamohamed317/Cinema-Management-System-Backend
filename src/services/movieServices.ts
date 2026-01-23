@@ -1,4 +1,4 @@
-import { Movie } from "../generated/prisma";
+import { Movie } from "@prisma/client";
 import { prisma } from "../prismaClient/client";
 import { MovieAddingBody, MovieEditingBody } from "../types/movie";
 

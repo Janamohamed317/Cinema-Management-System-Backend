@@ -1,6 +1,5 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { Role } from "../generated/prisma";
 import { AuthRequest } from "../types/auth";
 import { tokenSchema } from "../utils/validations/tokenValidation";
 
@@ -24,7 +23,7 @@ export function verifyToken(req: AuthRequest, res: Response, next: NextFunction)
         const { error, value } = tokenSchema.validate(decoded);
 
         if (error) {
-            return res.status(400).json({ message: error.details[0].message});
+            return res.status(400).json({ message: error.details[0].message });
         }
 
         req.user = {

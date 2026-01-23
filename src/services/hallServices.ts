@@ -1,4 +1,4 @@
-import { Hall } from "../generated/prisma"
+import { Hall } from "@prisma/client"
 import { prisma } from "../prismaClient/client"
 import { HallAddingBody, HallEditingBody } from "../types/hall"
 

@@ -1,6 +1,6 @@
 import Joi from "joi"
 import { HallAddingBody, HallEditingBody } from "../../types/hall"
-import { HallType, ScreenType } from "../../generated/prisma";
+import { HallType, ScreenType } from "@prisma/client"
 
 export function validateHallData(obj: HallAddingBody) {
     const schema = Joi.object({

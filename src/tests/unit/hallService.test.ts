@@ -1,6 +1,6 @@
 import { addHallService, editHallById, findHallById, findHallByName, getAllActiveHalls, getHallConflictInfo, restoreHallById, softDeleteHallById } from "../../services/hallServices"
 import { prisma } from "../../prismaClient/client"
-import { HallType, ScreenType } from "../../generated/prisma"
+import { HallType, ScreenType } from "@prisma/client"
 
 jest.mock("../../prismaClient/client")
 

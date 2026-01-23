@@ -1,17 +1,15 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import { PrismaClient, Role } from "../generated/prisma";
+import { PrismaClient, Role } from "@prisma/client";
 import { AssignRoleBody } from "../types/user";
 import { UserRegisterationBody } from "../types/auth";
 import { validateAssignedEmployee } from "../utils/validations/employeeManagementValidations";
 import { validateUserCreation } from "../utils/validations/userValidations";
-import { assignRole, checkEmailExistance, CreateUser } from "../services/userServices";
-
-const prisma = new PrismaClient()
+import { assignRole, checkEmailExistance, registerEmployee } from "../services/userServices";
+import { prisma } from "../prismaClient/client";
 
 
 export const AssignRole = asyncHandler(async (req: Request<{}, {}, AssignRoleBody>, res: Response) => {
-
     const { error } = validateAssignedEmployee(req.body)
 
     if (error) {
@@ -57,7 +55,7 @@ export const EmployeeRegister = asyncHandler(async (req: Request<{}, {}, UserReg
         return
     }
 
-    const newUser = await CreateUser(req.body)
+    const newUser = await registerEmployee(req.body)
 
     res.status(201).json({ newUser })
     return

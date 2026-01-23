@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { tokenCreation } from "../utils/tokenCreation";
-import { findUserByEmailOrUsername, checkEmailExistance, CreateUser } from "../services/userServices";
+import { findUserByEmailOrUsername, checkEmailExistance, signupUser } from "../services/userServices";
 import { validateUserCreation, validateLogin } from "../utils/validations/userValidations";
 import { UserRegisterationBody, UserSigninBody } from "../types/auth";
 import { comparePassword } from "../services/authServices";
@@ -20,7 +20,7 @@ export const signup = asyncHandler(async (req: Request<{}, {}, UserRegisteration
         return
     }
 
-    const newUser = await CreateUser(req.body)
+    const newUser = await signupUser(req.body)
 
     const token = tokenCreation(newUser);
 

@@ -1,5 +1,5 @@
+import { User } from "@prisma/client";
 import bcrypt from "bcrypt"
-import { User } from "../generated/prisma";
 
 export const comparePassword = async (user: User, password: string) => {
 

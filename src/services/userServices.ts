@@ -1,4 +1,4 @@
-import { Role } from "../generated/prisma"
+import { Role } from "@prisma/client"
 import { prisma } from "../prismaClient/client"
 import { UserRegisterationBody } from "../types/auth"
 import { hashPassword } from "../utils/hash"
@@ -26,7 +26,7 @@ export const checkEmailExistance = async (email: string) => {
     return null
 }
 
-export const CreateUser = async (data: UserRegisterationBody) => {
+export const CreateUser = async (data: UserRegisterationBody, role: Role) => {
     const hashedPassword = await hashPassword(data.password);
 
     const newUser = await prisma.user.create({
@@ -34,10 +34,18 @@ export const CreateUser = async (data: UserRegisterationBody) => {
             email: data.email,
             username: data.username,
             password: hashedPassword,
-            role: Role.USER,
+            role
         },
     });
     return newUser
+}
+
+export const signupUser = (data: UserRegisterationBody) => {
+    return CreateUser(data, Role.USER);
+}
+
+export const registerEmployee = (data: UserRegisterationBody) => {
+    return CreateUser(data, Role.UNASSIGNED);
 }
 
 export const assignRole = async (userId: string, role: Role) => {

@@ -1,6 +1,6 @@
 import Joi from "joi";
 
-import { Role } from "../../generated/prisma"
+import { Role } from "@prisma/client"
 
 export function validateAssignedEmployee(obj: any) {
     const schema = Joi.object({

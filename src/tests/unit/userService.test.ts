@@ -1,10 +1,12 @@
-import { assignRole, checkEmailExistance, CreateUser, findUserByEmailOrUsername } from "../../services/userServices"
+import { assignRole, checkEmailExistance, CreateUser, findUserByEmailOrUsername, registerEmployee, signupUser } from "../../services/userServices"
 import { prisma } from "../../prismaClient/client"
 import { hashPassword } from "../../utils/hash"
-import { Role } from "../../generated/prisma"
+import { Role } from "@prisma/client"
+import { fakeUser } from "../../utils/testUtils"
 
 jest.mock("../../utils/hash")
 jest.mock("../../prismaClient/client")
+
 
 describe("User Services Unit Test", () => {
     beforeEach(() => {
@@ -63,7 +65,7 @@ describe("User Services Unit Test", () => {
         (hashPassword as jest.Mock).mockResolvedValue("hashedPassword");
         (prisma.user.create as jest.Mock).mockResolvedValue(createdUser)
 
-        const result = await CreateUser(testUser)
+        const result = await CreateUser(testUser, Role.USER)
 
         expect(result).toEqual(createdUser)
         expect(prisma.user.create).toHaveBeenCalledWith({ data: testUserWithHashedPassword })
