@@ -1,11 +1,12 @@
 import request from "supertest";
 import app from "../../app";
 import { prisma } from '../../prismaClient/client'
-import { authTestUser } from "../../utils/testUtils";
+import { buildFakeUser } from "../testUtils/UserTestUtils";
 
 describe("Auth Routes Integration Test", () => {
+    const fakeUser = buildFakeUser()
     beforeEach(async () => {
-        await prisma.user.deleteMany({ where: { email: authTestUser.email } });
+        await prisma.user.deleteMany({ where: { email: fakeUser.email } });
     });
 
     afterAll(async () => {
@@ -26,20 +27,20 @@ describe("Auth Routes Integration Test", () => {
         it("should create a new user and return 201 with token", async () => {
             const res = await request(app)
                 .post("/api/auth/signup")
-                .send(authTestUser);
+                .send(fakeUser);
 
             expect(res.status).toBe(201);
             expect(res.body.newUser).toBeDefined();
-            expect(res.body.newUser.email).toBe(authTestUser.email);
+            expect(res.body.newUser.email).toBe(fakeUser.email);
             expect(res.body.token).toBeDefined();
         });
 
         it("should return 409 if user already exists", async () => {
-            await request(app).post("/api/auth/signup").send(authTestUser);
+            await request(app).post("/api/auth/signup").send(fakeUser);
 
             const res = await request(app)
                 .post("/api/auth/signup")
-                .send(authTestUser);
+                .send(fakeUser);
 
             expect(res.status).toBe(409);
             expect(res.body.message).toBe("User Already exists");
@@ -67,22 +68,22 @@ describe("Auth Routes Integration Test", () => {
         });
 
         it("should return 401 if password is incorrect", async () => {
-            await request(app).post("/api/auth/signup").send(authTestUser);
+            await request(app).post("/api/auth/signup").send(fakeUser);
 
             const res = await request(app)
                 .post("/api/auth/signin")
-                .send({ email: authTestUser.email, password: "WrongPassword123" });
+                .send({ email: fakeUser.email, password: "WrongPassword123" });
 
             expect(res.status).toBe(401);
             expect(res.body.message).toBe("Email or Password is incorrect");
         });
 
         it("should signin successfully and return 200 with token", async () => {
-            await request(app).post("/api/auth/signup").send(authTestUser);
+            await request(app).post("/api/auth/signup").send(fakeUser);
 
             const res = await request(app)
                 .post("/api/auth/signin")
-                .send({ email: authTestUser.email, password: authTestUser.password });
+                .send({ email: fakeUser.email, password: fakeUser.password });
 
 
             expect(res.status).toBe(200);

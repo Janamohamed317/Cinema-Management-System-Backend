@@ -2,13 +2,14 @@ import { assignRole, checkEmailExistance, CreateUser, findUserByEmailOrUsername,
 import { prisma } from "../../prismaClient/client"
 import { hashPassword } from "../../utils/hash"
 import { Role } from "@prisma/client"
-import { fakeUser } from "../../utils/testUtils"
+import { buildFakeUser } from "../testUtils/UserTestUtils"
 
 jest.mock("../../utils/hash")
 jest.mock("../../prismaClient/client")
 
 
 describe("User Services Unit Test", () => {
+    const fakeUser = buildFakeUser()
     beforeEach(() => {
         jest.clearAllMocks()
     })
@@ -52,24 +53,19 @@ describe("User Services Unit Test", () => {
     })
 
     it("Create User", async () => {
-        const testUser = {
-            email: "user@email.com",
-            username: "user123",
-            password: "plainPassword",
-        }
+     
+        const createdUser = { id: "2", role: "USER", ...fakeUser, password: "hashedPassword" }
 
-        const createdUser = { id: "2", role: "USER", ...testUser, password: "hashedPassword" }
-
-        const testUserWithHashedPassword = { ...testUser, password: "hashedPassword", role: "USER" };
+        const testUserWithHashedPassword = { ...fakeUser, password: "hashedPassword", role: "USER" };
 
         (hashPassword as jest.Mock).mockResolvedValue("hashedPassword");
         (prisma.user.create as jest.Mock).mockResolvedValue(createdUser)
 
-        const result = await CreateUser(testUser, Role.USER)
+        const result = await CreateUser(fakeUser, Role.USER)
 
         expect(result).toEqual(createdUser)
         expect(prisma.user.create).toHaveBeenCalledWith({ data: testUserWithHashedPassword })
-        expect(hashPassword).toHaveBeenCalledWith(testUser.password)
+        expect(hashPassword).toHaveBeenCalledWith(fakeUser.password)
     })
 
     describe("assignRole", () => {

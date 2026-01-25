@@ -1,4 +1,5 @@
-import { HallType, ScreenType } from "../generated/prisma"
+import { HallType, ScreenType } from "@prisma/client"
+
 
 export type HallAddingBody = {
     name: string,

@@ -18,10 +18,10 @@ export const addMovie = asyncHandler(async (req: Request<{}, {}, MovieAddingBody
 
     if (foundMovie) {
         const isDeleted = getMovieConflictInfo(foundMovie)
-        isDeleted ? res.status(409).json({ message: " `Movie with the same name already exists.`" }) :
-            res.status(400).json({
-                message: `Movie "${foundMovie.name}" exists but is deleted. Please restore it instead.`
-            })
+        isDeleted ? res.status(409).json({
+            message: `Movie "${foundMovie.name}" exists but is deleted. Please restore it instead.`
+        }) :
+            res.status(409).json({ message: " `Movie with the same name already exists.`" })
         return
     }
 

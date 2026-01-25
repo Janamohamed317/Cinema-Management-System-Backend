@@ -25,11 +25,11 @@ export const addHall = asyncHandler(async (req: Request<{}, {}, HallAddingBody>,
         const isDeleted = getHallConflictInfo(hall)
 
         if (!isDeleted) {
-            res.status(409).json("Hall with the Same Name Already Exists")
+            res.status(409).json({ message: "Hall with the Same Name Already Exists" })
             return
         }
 
-        res.status(400).json({
+        res.status(409).json({
             message: `Hall ${hall.name} exists but is deleted. Please restore it instead of creating a new one.`,
         })
         return
@@ -80,7 +80,7 @@ export const editHall = asyncHandler(async (req: Request<{ id: string }, {}, Hal
     }
 
     const { id } = req.params
-    const body = req.body 
+    const body = req.body
 
     const result = await editHallById(id, body)
 
