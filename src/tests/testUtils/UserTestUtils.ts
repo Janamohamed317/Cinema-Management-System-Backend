@@ -17,7 +17,7 @@ export const buildFakeUser = () => ({
 });
 
 export const seedAdminAndGetToken = async () => {
-    const admin = await prisma.user.create({
+    const user = await prisma.user.create({
         data: {
             email: `admin${randomUUID()}@test.com`,
             username: `admin${randomUUID()}`,
@@ -25,8 +25,8 @@ export const seedAdminAndGetToken = async () => {
             role: Role.SUPER_ADMIN,
         },
     });
-    const token = tokenCreation(admin);
-    return { token, admin };
+    const token = tokenCreation(user);
+    return { token, user };
 
 }
 

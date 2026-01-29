@@ -73,13 +73,13 @@ model Hall {
 
 model Screening {
   id        String    @id @default(uuid())
-  movie     Movie     @relation(fields: [movieId], references: [id])
   hall      Hall      @relation(fields: [hallId], references: [id])
-  movieId   String
-  startTime DateTime
-  endTime   DateTime
-  deletedAt DateTime?
+  movie     Movie     @relation(fields: [movieId], references: [id])
   hallId    String
+  movieId   String
+  startTime DateTime 
+  deletedAt DateTime?
 
+  @@unique([hallId, startTime])
   @@index([deletedAt])
 }

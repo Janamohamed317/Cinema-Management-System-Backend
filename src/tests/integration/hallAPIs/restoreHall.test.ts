@@ -4,11 +4,12 @@ import { prisma } from "../../../prismaClient/client";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { User } from "@prisma/client";
 import { randomUUID } from "crypto";
-import { buildHallData, seedHallManagerAndGetToken } from "../../testUtils/hallTestUtils";
+import { buildHallData, seedHallManagerAndGetToken, saveHallToDb } from "../../testUtils/hallTestUtils";
+import { UserData } from "../../../types/user";
 
 describe("Hall Routes Integration Test - restoreHall", () => {
-    let adminData: { admin: User; token: string };
-    let hallManagerData: { hallManager: User; token: string };
+    let adminData: UserData;
+    let hallManagerData: UserData;
     let hallId: string;
 
     const roles = [
@@ -22,12 +23,12 @@ describe("Hall Routes Integration Test - restoreHall", () => {
     });
 
     afterAll(async () => {
-        await prisma.user.deleteMany({ where: { id: adminData.admin.id } });
-        await prisma.user.deleteMany({ where: { id: hallManagerData.hallManager.id } });
+        await prisma.user.deleteMany({ where: { id: adminData.user.id } });
+        await prisma.user.deleteMany({ where: { id: hallManagerData.user.id } });
     });
 
     beforeEach(async () => {
-        const hall = await prisma.hall.create({ data: buildHallData() });
+        const hall = await saveHallToDb();
         hallId = hall.id;
 
         await prisma.hall.update({

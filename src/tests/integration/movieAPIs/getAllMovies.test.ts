@@ -3,18 +3,17 @@ import app from "../../../app";
 import { prisma } from "../../../prismaClient/client";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { User } from "@prisma/client";
-import { buildMovieData, seedMovieManagerAndGetToken } from "../../testUtils/movieTestUtils";
+import { buildMovieData, seedMovieManagerAndGetToken, saveMovieToDb } from "../../testUtils/movieTestUtils";
+
+import { UserData } from "../../../types/user";
 
 describe("Movie Routes Integration Test - getAllMovies", () => {
-    let adminData: { admin: User; token: string };
-    let movieManagerData: { movieManager: User; token: string };
-    let createdMoviesIds: string[] = [];
-
-
+    let adminData: UserData, movieManagerData: UserData
     const roles = [
         { name: "Admin", token: () => adminData.token },
         { name: "MovieManager", token: () => movieManagerData.token },
     ];
+    let createdMoviesIds: string[] = [];
 
     beforeAll(async () => {
         adminData = await seedAdminAndGetToken();
@@ -22,17 +21,17 @@ describe("Movie Routes Integration Test - getAllMovies", () => {
     });
 
     afterAll(async () => {
-        await prisma.user.deleteMany({ where: { id: adminData.admin.id } });
-        await prisma.user.deleteMany({ where: { id: movieManagerData.movieManager.id } });
+        await prisma.user.deleteMany({ where: { id: adminData.user.id } });
+        await prisma.user.deleteMany({ where: { id: movieManagerData.user.id } });
     });
 
     beforeEach(async () => {
         createdMoviesIds = [];
-        const movie1 = await prisma.movie.create({ data: buildMovieData() });
-        const movie2 = await prisma.movie.create({ data: buildMovieData() });
+        const movie1 = await saveMovieToDb();
+        const movie2 = await saveMovieToDb();
         createdMoviesIds.push(movie1.id, movie2.id);
 
-        const deletedMovie = await prisma.movie.create({ data: buildMovieData() });
+        const deletedMovie = await saveMovieToDb();
         await prisma.movie.update({
             where: { id: deletedMovie.id },
             data: { deletedAt: new Date() }

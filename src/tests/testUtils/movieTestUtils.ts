@@ -10,7 +10,7 @@ export const buildMovieData = () => ({
 });
 
 export const seedMovieManagerAndGetToken = async () => {
-    const movieManager = await prisma.user.create({
+    const user = await prisma.user.create({
         data: {
             email: `HallManager${randomUUID()}@test.com`,
             username: `hallManager${randomUUID()}`,
@@ -19,6 +19,12 @@ export const seedMovieManagerAndGetToken = async () => {
         },
     });
 
-    const token = tokenCreation(movieManager);
-    return { token, movieManager }
+    const token = tokenCreation(user);
+    return { token, user }
+}
+
+
+export const saveMovieToDb = async () => {
+    const movieData = buildMovieData()
+    return await prisma.movie.create({ data: movieData })
 }

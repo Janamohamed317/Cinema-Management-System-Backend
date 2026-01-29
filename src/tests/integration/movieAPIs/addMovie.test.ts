@@ -2,14 +2,12 @@ import request from "supertest";
 import app from "../../../app";
 import { prisma } from "../../../prismaClient/client";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
-import { User } from "@prisma/client";
-import { buildMovieData, seedMovieManagerAndGetToken } from "../../testUtils/movieTestUtils";
+import { buildMovieData, seedMovieManagerAndGetToken, saveMovieToDb } from "../../testUtils/movieTestUtils";
+import { UserData } from "../../../types/user";
 
 describe("Movie Routes Integration Test - addMovie", () => {
-    let adminData: { token: string; admin: User };
-    let movieManagerData: { token: string; movieManager: User };
     const movieData = buildMovieData();
-
+    let adminData: UserData, movieManagerData: UserData
     const roles = [
         { name: "Admin", token: () => adminData.token },
         { name: "MovieManager", token: () => movieManagerData.token },
@@ -21,9 +19,9 @@ describe("Movie Routes Integration Test - addMovie", () => {
     });
 
     afterAll(async () => {
-        await prisma.user.deleteMany({ where: { id: adminData.admin.id } });
+        await prisma.user.deleteMany({ where: { id: adminData.user.id } });
         await prisma.user.deleteMany({
-            where: { id: movieManagerData.movieManager.id },
+            where: { id: movieManagerData.user.id },
         });
     });
 
@@ -48,15 +46,16 @@ describe("Movie Routes Integration Test - addMovie", () => {
     });
 
     describe("addMovie while active movie exists", () => {
+        let existingMovie = null as any;
         beforeEach(async () => {
-            await prisma.movie.create({ data: movieData });
+            existingMovie = await saveMovieToDb();
         });
 
         roles.forEach(({ name, token }) => {
             it(`returns 409 for ${name} token`, async () => {
                 const res = await request(app)
                     .post("/api/movie/add")
-                    .send(movieData)
+                    .send({ ...movieData, name: existingMovie.name })
                     .set("Authorization", `Bearer ${token()}`);
 
                 expect(res.status).toBe(409);
@@ -66,10 +65,11 @@ describe("Movie Routes Integration Test - addMovie", () => {
     });
 
     describe("addMovie while deleted movie exists", () => {
+        let existingMovie = null as any;
         beforeEach(async () => {
-            const movie = await prisma.movie.create({ data: movieData });
+            existingMovie = await saveMovieToDb();
             await prisma.movie.update({
-                where: { id: movie.id },
+                where: { id: existingMovie.id },
                 data: { deletedAt: new Date() },
             });
         });
@@ -78,12 +78,12 @@ describe("Movie Routes Integration Test - addMovie", () => {
             it(`returns 409 for ${name} token`, async () => {
                 const res = await request(app)
                     .post("/api/movie/add")
-                    .send(movieData)
+                    .send({ ...movieData, name: existingMovie.name })
                     .set("Authorization", `Bearer ${token()}`);
 
                 expect(res.status).toBe(409);
                 expect(res.body.message).toBe(
-                    `Movie "${movieData.name}" exists but is deleted. Please restore it instead.`
+                    `Movie "${existingMovie.name}" exists but is deleted. Please restore it instead.`
                 );
             });
         });

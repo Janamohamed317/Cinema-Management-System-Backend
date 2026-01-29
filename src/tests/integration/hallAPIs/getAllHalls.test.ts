@@ -1,13 +1,14 @@
 import request from "supertest";
 import app from "../../../app";
 import { prisma } from "../../../prismaClient/client";
-import { buildHallData, seedHallManagerAndGetToken } from "../../testUtils/hallTestUtils";
+import { buildHallData, seedHallManagerAndGetToken, saveHallToDb } from "../../testUtils/hallTestUtils";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { User } from "@prisma/client";
+import { UserData } from "../../../types/user";
 
 describe("Hall Routes Integration Test - getAllHalls", () => {
-    let adminData: { admin: User; token: string };
-    let hallManagerData: { hallManager: User; token: string };
+    let adminData: UserData;
+    let hallManagerData: UserData;
     let createdHallIds: string[] = [];
 
     const roles = [
@@ -21,18 +22,18 @@ describe("Hall Routes Integration Test - getAllHalls", () => {
     });
 
     afterAll(async () => {
-        await prisma.user.deleteMany({ where: { id: adminData.admin.id } });
-        await prisma.user.deleteMany({ where: { id: hallManagerData.hallManager.id } });
+        await prisma.user.deleteMany({ where: { id: adminData.user.id } });
+        await prisma.user.deleteMany({ where: { id: hallManagerData.user.id } });
     });
 
     beforeEach(async () => {
         createdHallIds = [];
-        const hall1 = await prisma.hall.create({ data: buildHallData() });
-        const hall2 = await prisma.hall.create({ data: buildHallData() });
+        const hall1 = await saveHallToDb();
+        const hall2 = await saveHallToDb();
         createdHallIds.push(hall1.id, hall2.id);
 
 
-        const deletedHall = await prisma.hall.create({ data: buildHallData() });
+        const deletedHall = await saveHallToDb();
         await prisma.hall.update({
             where: { id: deletedHall.id },
             data: { deletedAt: new Date() }

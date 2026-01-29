@@ -4,36 +4,34 @@ import { prisma } from "../../../prismaClient/client";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { User } from "@prisma/client";
 import { randomUUID } from "crypto";
-import { buildMovieData, seedMovieManagerAndGetToken } from "../../testUtils/movieTestUtils";
+import { buildMovieData, seedMovieManagerAndGetToken, saveMovieToDb } from "../../testUtils/movieTestUtils";
 import { seedHallManagerAndGetToken } from "../../testUtils/hallTestUtils";
+import { UserData } from "../../../types/user";
 
 describe("Movie Routes Integration Test - deleteMovie", () => {
     const movieData = buildMovieData();
-    let adminData: { token: string; admin: User };
-    let hallManagerData: { token: string; hallManager: User };
-    let movieManagerData: { token: string; movieManager: User };
-
-    let movieId: string;
-
+    let adminData: UserData, movieManagerData: UserData
     const roles = [
         { name: "Admin", token: () => adminData.token },
         { name: "MovieManager", token: () => movieManagerData.token },
     ];
+    let movieId: string;
+
+
+
 
     beforeAll(async () => {
         adminData = await seedAdminAndGetToken();
-        hallManagerData = await seedHallManagerAndGetToken();
         movieManagerData = await seedMovieManagerAndGetToken();
     });
 
     afterAll(async () => {
-        await prisma.user.deleteMany({ where: { id: adminData.admin.id } });
-        await prisma.user.deleteMany({ where: { id: hallManagerData.hallManager.id } });
-        await prisma.user.deleteMany({ where: { id: movieManagerData.movieManager.id } });
+        await prisma.user.deleteMany({ where: { id: adminData.user.id } });
+        await prisma.user.deleteMany({ where: { id: movieManagerData.user.id } });
     });
 
     beforeEach(async () => {
-        const movie = await prisma.movie.create({ data: movieData });
+        const movie = await saveMovieToDb();
         movieId = movie.id;
     });
 

@@ -1,25 +1,26 @@
 import request from "supertest";
-import app from "../../app";
-import { prisma } from "../../prismaClient/client";
-import { buildEmployeeUser, buildFakeUser, seedAdminAndGetToken } from "../testUtils/UserTestUtils";
+import app from "../../../app";
+import { prisma } from "../../../prismaClient/client";
+import { buildEmployeeUser, buildFakeUser, seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { Role } from "@prisma/client";
-import { userInfo } from "node:os";
 
-describe("Employee Management Routes – Integration Tests", () => {
+describe("Employee Management Routes – Assign Role", () => {
     let token: string;
     let admin: any;
     const fakeUser = buildFakeUser()
     const empTestUser = buildEmployeeUser()
+
     beforeAll(async () => {
         admin = await seedAdminAndGetToken();
         token = admin.token
     });
 
     afterAll(async () => {
-        await prisma.$disconnect();
+        await prisma.user.deleteMany({ where: { id: admin.user.id } });
     });
 
     afterEach(async () => {
+        // Cleanup created users
         await prisma.user.deleteMany({
             where: {
                 OR: [
@@ -27,47 +28,6 @@ describe("Employee Management Routes – Integration Tests", () => {
                     { username: fakeUser.username }
                 ]
             }
-        });
-    });
-
-    // Employee Registration
-
-    describe("POST /api/EmployeeManagement/register", () => {
-        it("returns 400 if body is invalid", async () => {
-            const res = await request(app)
-                .post("/api/EmployeeManagement/register")
-                .send({ email: "invalid-email" })
-                .set("Authorization", `Bearer ${token}`);
-
-            expect(res.status).toBe(400);
-            expect(res.body.message).toBeDefined();
-        });
-
-        it("returns 409 if employee already exists", async () => {
-            await request(app)
-                .post("/api/EmployeeManagement/register")
-                .send(empTestUser)
-                .set("Authorization", `Bearer ${token}`);
-
-            const res = await request(app)
-                .post("/api/EmployeeManagement/register")
-                .send(empTestUser)
-                .set("Authorization", `Bearer ${token}`);
-
-            expect(res.status).toBe(409);
-            expect(res.body.message).toBeDefined();
-        });
-
-        it("returns 201 and registers a new employee", async () => {
-
-            const res = await request(app)
-                .post("/api/EmployeeManagement/register")
-                .send(empTestUser)
-                .set("Authorization", `Bearer ${token}`);
-
-            expect(res.status).toBe(201);
-            expect(res.body.newUser).toBeDefined();
-            expect(res.body.newUser.email).toBe(empTestUser.email);
         });
     });
 
@@ -81,7 +41,14 @@ describe("Employee Management Routes – Integration Tests", () => {
                 .send(empTestUser)
                 .set("Authorization", `Bearer ${token}`);
 
-            employeeId = res.body.newUser.id;
+            // Check if registration was successful or if user already existed (handle potential 409 if test order varies)
+            if (res.status === 201) {
+                employeeId = res.body.newUser.id;
+            } else {
+                // Try to fetch if they exist - simplified for now assuming clean state
+                const user = await prisma.user.findFirst({ where: { username: empTestUser.username } })
+                employeeId = user?.id || ""
+            }
         });
 
         it("returns 400 if body is invalid", async () => {

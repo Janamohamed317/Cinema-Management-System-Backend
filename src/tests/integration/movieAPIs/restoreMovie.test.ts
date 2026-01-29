@@ -4,13 +4,12 @@ import { prisma } from "../../../prismaClient/client";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { User } from "@prisma/client";
 import { randomUUID } from "crypto";
-import { buildMovieData, seedMovieManagerAndGetToken } from "../../testUtils/movieTestUtils";
+import { buildMovieData, seedMovieManagerAndGetToken, saveMovieToDb } from "../../testUtils/movieTestUtils";
+import { UserData } from "../../../types/user";
 
 describe("Movie Routes Integration Test - restoreMovie", () => {
-    let adminData: { admin: User; token: string };
-    let movieManagerData: { movieManager: User; token: string };
+    let adminData: UserData, movieManagerData: UserData
     let movieId: string;
-
     const roles = [
         { name: "Admin", token: () => adminData.token },
         { name: "MovieManager", token: () => movieManagerData.token },
@@ -22,12 +21,12 @@ describe("Movie Routes Integration Test - restoreMovie", () => {
     });
 
     afterAll(async () => {
-        await prisma.user.deleteMany({ where: { id: adminData.admin.id } });
-        await prisma.user.deleteMany({ where: { id: movieManagerData.movieManager.id } });
+        await prisma.user.deleteMany({ where: { id: adminData.user.id } });
+        await prisma.user.deleteMany({ where: { id: movieManagerData.user.id } });
     });
 
     beforeEach(async () => {
-        const movie = await prisma.movie.create({ data: buildMovieData() });
+        const movie = await saveMovieToDb();
         movieId = movie.id;
 
         await prisma.movie.update({

@@ -15,7 +15,7 @@ export const seedHallManagerAndGetToken = async () => {
     });
 
     const token = tokenCreation(hallManager);
-    return { token, hallManager }
+    return { token, user: hallManager }
 }
 
 export const buildHallData = () => ({
@@ -24,3 +24,8 @@ export const buildHallData = () => ({
     screenType: ScreenType.SCREEN_X,
     seats: 50,
 });
+
+export const saveHallToDb = async () => {
+    const hallData = buildHallData()
+    return await prisma.hall.create({ data: hallData })
+}

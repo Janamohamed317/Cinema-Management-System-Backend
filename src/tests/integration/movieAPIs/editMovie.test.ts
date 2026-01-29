@@ -4,17 +4,16 @@ import { prisma } from "../../../prismaClient/client";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { User } from "@prisma/client";
 import { randomUUID } from "crypto";
-import { buildMovieData, seedMovieManagerAndGetToken } from "../../testUtils/movieTestUtils";
+import { buildMovieData, seedMovieManagerAndGetToken, saveMovieToDb } from "../../testUtils/movieTestUtils";
+import { UserData } from "../../../types/user";
 
 describe("Movie Routes Integration Test - editMovie", () => {
-    let adminData: { admin: User; token: string };
-    let movieManagerData: { movieManager: User; token: string };
-    let movieId: string;
-
+    let adminData: UserData, movieManagerData: UserData
     const roles = [
         { name: "Admin", token: () => adminData.token },
         { name: "MovieManager", token: () => movieManagerData.token },
     ];
+    let movieId: string;
 
     beforeAll(async () => {
         adminData = await seedAdminAndGetToken();
@@ -22,14 +21,12 @@ describe("Movie Routes Integration Test - editMovie", () => {
     });
 
     afterAll(async () => {
-        await prisma.user.deleteMany({ where: { id: adminData.admin.id } });
-        await prisma.user.deleteMany({ where: { id: movieManagerData.movieManager.id } });
+        await prisma.user.deleteMany({ where: { id: adminData.user.id } });
+        await prisma.user.deleteMany({ where: { id: movieManagerData.user.id } });
     });
 
     beforeEach(async () => {
-        const movie = await prisma.movie.create({
-            data: buildMovieData()
-        });
+        const movie = await saveMovieToDb();
         movieId = movie.id;
     });
 
@@ -44,7 +41,7 @@ describe("Movie Routes Integration Test - editMovie", () => {
                 .send({ name: "Updated Movie" });
 
             expect(res.status).toBe(401);
-        }); 
+        });
     });
 
     describe("validation", () => {
@@ -62,7 +59,7 @@ describe("Movie Routes Integration Test - editMovie", () => {
             it(`returns 400 for invalid body for ${name}`, async () => {
                 const res = await request(app)
                     .put(`/api/movie/edit/${movieId}`)
-                    .send({ duration: -10 }) 
+                    .send({ duration: -10 })
                     .set("Authorization", `Bearer ${token()}`);
 
                 expect(res.status).toBe(400);

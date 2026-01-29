@@ -1,14 +1,15 @@
 import request from "supertest";
 import app from "../../../app";
 import { prisma } from "../../../prismaClient/client";
-import {seedAdminAndGetToken} from "../../testUtils/UserTestUtils";
+import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { User } from "@prisma/client";
 import { randomUUID } from "crypto";
-import { buildHallData, seedHallManagerAndGetToken } from "../../testUtils/hallTestUtils";
+import { buildHallData, seedHallManagerAndGetToken, saveHallToDb } from "../../testUtils/hallTestUtils";
+import { UserData } from "../../../types/user";
 
 describe("Hall Routes Integration Test - editHall", () => {
-    let adminData: { admin: User; token: string };
-    let hallManagerData: { hallManager: User; token: string };
+    let adminData: UserData;
+    let hallManagerData: UserData;
     let hallId: string;
 
     const roles = [
@@ -22,14 +23,12 @@ describe("Hall Routes Integration Test - editHall", () => {
     });
 
     afterAll(async () => {
-        await prisma.user.deleteMany({ where: { id: adminData.admin.id } });
-        await prisma.user.deleteMany({ where: { id: hallManagerData.hallManager.id } });
+        await prisma.user.deleteMany({ where: { id: adminData.user.id } });
+        await prisma.user.deleteMany({ where: { id: hallManagerData.user.id } });
     });
 
     beforeEach(async () => {
-        const hall = await prisma.hall.create({
-            data: buildHallData()
-        });
+        const hall = await saveHallToDb();
         hallId = hall.id;
     });
 
@@ -44,7 +43,7 @@ describe("Hall Routes Integration Test - editHall", () => {
                 .send({ seats: 100 });
 
             expect(res.status).toBe(401);
-        }); 
+        });
     });
 
     describe("validation", () => {
@@ -62,7 +61,7 @@ describe("Hall Routes Integration Test - editHall", () => {
             it(`returns 400 for invalid body for ${name}`, async () => {
                 const res = await request(app)
                     .put(`/api/hall/edit/${hallId}`)
-                    .send({ seats: -5 }) 
+                    .send({ seats: -5 })
                     .set("Authorization", `Bearer ${token()}`);
 
                 expect(res.status).toBe(400);

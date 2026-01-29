@@ -1,50 +1,20 @@
 import request from "supertest";
-import app from "../../app";
-import { prisma } from '../../prismaClient/client'
-import { buildFakeUser } from "../testUtils/UserTestUtils";
+import app from "../../../app";
+import { prisma } from '../../../prismaClient/client'
+import { buildFakeUser } from "../../testUtils/UserTestUtils";
 
-describe("Auth Routes Integration Test", () => {
+describe("Auth Routes Integration Test - Signin", () => {
     const fakeUser = buildFakeUser()
-    beforeEach(async () => {
+
+    beforeAll(async () => {
+        // Ensure clean state or setup user
         await prisma.user.deleteMany({ where: { email: fakeUser.email } });
+        // Create the user for signin tests
+        await request(app).post("/api/auth/signup").send(fakeUser);
     });
 
     afterAll(async () => {
-        await prisma.$disconnect();
-    });
-
-
-    describe("POST /api/auth/signup", () => {
-        it("should return 400 if body is invalid", async () => {
-            const res = await request(app)
-                .post("/api/auth/signup")
-                .send({ email: "invalidemail" });
-
-            expect(res.status).toBe(400);
-            expect(res.body.message).toBeDefined();
-        });
-
-        it("should create a new user and return 201 with token", async () => {
-            const res = await request(app)
-                .post("/api/auth/signup")
-                .send(fakeUser);
-
-            expect(res.status).toBe(201);
-            expect(res.body.newUser).toBeDefined();
-            expect(res.body.newUser.email).toBe(fakeUser.email);
-            expect(res.body.token).toBeDefined();
-        });
-
-        it("should return 409 if user already exists", async () => {
-            await request(app).post("/api/auth/signup").send(fakeUser);
-
-            const res = await request(app)
-                .post("/api/auth/signup")
-                .send(fakeUser);
-
-            expect(res.status).toBe(409);
-            expect(res.body.message).toBe("User Already exists");
-        });
+        await prisma.user.deleteMany({ where: { email: fakeUser.email } });
     });
 
     // Signin tests
@@ -68,8 +38,6 @@ describe("Auth Routes Integration Test", () => {
         });
 
         it("should return 401 if password is incorrect", async () => {
-            await request(app).post("/api/auth/signup").send(fakeUser);
-
             const res = await request(app)
                 .post("/api/auth/signin")
                 .send({ email: fakeUser.email, password: "WrongPassword123" });
@@ -79,8 +47,6 @@ describe("Auth Routes Integration Test", () => {
         });
 
         it("should signin successfully and return 200 with token", async () => {
-            await request(app).post("/api/auth/signup").send(fakeUser);
-
             const res = await request(app)
                 .post("/api/auth/signin")
                 .send({ email: fakeUser.email, password: fakeUser.password });

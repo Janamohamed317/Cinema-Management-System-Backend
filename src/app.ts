@@ -3,6 +3,8 @@ import authPath from "./routes/authRoute";
 import EmployeeManagementPath from "./routes/employeeManagementRoute";
 import moviePath from "./routes/movieRoute";
 import hallPath from "./routes/hallRoute";
+import screeningPath from "./routes/screeningRoute";
+
 
 const app = express();
 
@@ -17,5 +19,6 @@ app.use('/api/hall', hallPath);
 
 app.use('/api/movie', moviePath);
 
+app.use('/api/screening', screeningPath);
 
 export default app;
