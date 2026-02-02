@@ -20,7 +20,6 @@ describe("Employee Management Routes – Assign Role", () => {
     });
 
     afterEach(async () => {
-        // Cleanup created users
         await prisma.user.deleteMany({
             where: {
                 OR: [
@@ -41,11 +40,9 @@ describe("Employee Management Routes – Assign Role", () => {
                 .send(empTestUser)
                 .set("Authorization", `Bearer ${token}`);
 
-            // Check if registration was successful or if user already existed (handle potential 409 if test order varies)
             if (res.status === 201) {
                 employeeId = res.body.newUser.id;
             } else {
-                // Try to fetch if they exist - simplified for now assuming clean state
                 const user = await prisma.user.findFirst({ where: { username: empTestUser.username } })
                 employeeId = user?.id || ""
             }

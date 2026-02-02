@@ -17,7 +17,6 @@ export const buildScreeningData = async (startTime: Date) => {
 export const saveScreeningToDb = async (date: string) => {
     const startTime = new Date(date);
     const screeningData = await buildScreeningData(startTime)
-    const hallId = screeningData.hallId
     const screening = await prisma.screening.create({ data: screeningData })
-    return { screening, hallId }
+    return screening
 }

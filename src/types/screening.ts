@@ -4,7 +4,13 @@ export type ScreeningAddingBody = {
     startTime: Date
 }
 
+export type ScreeningEditingBody = {
+    hallId?: string
+    movieId?: string
+    startTime?: Date
+}
+
 export type ScreeningInterval = {
     startTime: Date;
-    duration: number; 
+    duration: number;
 };

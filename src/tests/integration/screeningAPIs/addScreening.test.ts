@@ -20,11 +20,6 @@ describe("Screening Routes Integration Test - addScreening", () => {
         adminData = await seedAdminAndGetToken()
         movieManagerData = await seedMovieManagerAndGetToken()
     })
-
-    afterAll(() => {
-
-    })
-
     describe("add Screening with invalid body", () => {
         roles.forEach(({ name, token }) => {
             it(`returns 400 for ${name} token`, async () => {
@@ -92,14 +87,14 @@ describe("Screening Routes Integration Test - addScreening", () => {
 
 
     describe("add Screening causing Conflict", () => {
-        let screening: any
+        let screening: Screening
         let movie: Movie
         beforeEach(async () => {
             movie = await saveMovieToDb()
             screening = await saveScreeningToDb("2026-02-10T10:00:00.000Z")
         })
         afterEach(async () => {
-            await prisma.screening.deleteMany({ where: { id: screening.screening.id } })
+            await prisma.screening.deleteMany({ where: { id: screening.id } })
         })
         roles.forEach(({ name, token }) => {
             const time = new Date("2026-02-10T12:00:00.000Z")
