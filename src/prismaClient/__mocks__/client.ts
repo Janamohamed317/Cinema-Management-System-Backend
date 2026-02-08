@@ -29,4 +29,21 @@ export const prisma = {
         update: jest.fn(),
         updateMany: jest.fn(),
     },
+    seat: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        updateMany: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+    },
+    ticket: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        updateMany: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+    },
+    $transaction: jest.fn((callback) => callback(require("../../prismaClient/client").prisma)),
 }
+

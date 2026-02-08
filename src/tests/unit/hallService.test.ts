@@ -47,7 +47,7 @@ describe("Hall Service Unit Tests", () => {
             name: "VIP Hall",
             type: HallType.REGULAR,
             screenType: ScreenType.IMAX,
-            seats: 120,
+            seatsNumber: 120,
         }
 
         const createdHall = { id: "1", ...hallData, deletedAt: null };
@@ -97,7 +97,7 @@ describe("Hall Service Unit Tests", () => {
         })
 
         it("updates seats", async () => {
-            const data = { seats: 150 };
+            const data = { seatsNumber: 150 };
             (prisma.hall.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
 
             const result = await editHallById("1", data)
@@ -168,7 +168,7 @@ describe("Hall Service Unit Tests", () => {
         it("Not Deleted", () => {
             const hall = {
                 id: "1", name: "Hall A",
-                type: HallType.REGULAR, seats: 50, screenType: ScreenType.IMAX, deletedAt: null
+                type: HallType.REGULAR, seatsNumber: 50, screenType: ScreenType.IMAX, deletedAt: null
             }
             const result = getHallConflictInfo(hall)
 
@@ -178,7 +178,7 @@ describe("Hall Service Unit Tests", () => {
         it("Deleted", () => {
             const hall = {
                 id: "1", name: "Hall A",
-                type: HallType.REGULAR, seats: 50, screenType: ScreenType.IMAX, deletedAt: new Date
+                type: HallType.REGULAR, seatsNumber: 50, screenType: ScreenType.IMAX, deletedAt: new Date
             }
             const result = getHallConflictInfo(hall)
 

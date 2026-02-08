@@ -40,7 +40,7 @@ describe("Hall Routes Integration Test - editHall", () => {
         it("returns 401 if no token is provided", async () => {
             const res = await request(app)
                 .put(`/api/hall/edit/${hallId}`)
-                .send({ seats: 100 });
+                .send({ seatsNumber: 100 });
 
             expect(res.status).toBe(401);
         });
@@ -51,7 +51,7 @@ describe("Hall Routes Integration Test - editHall", () => {
             it(`returns 400 for invalid hall id for ${name}`, async () => {
                 const res = await request(app)
                     .put("/api/hall/edit/invalid-id")
-                    .send({ seats: 100 })
+                    .send({ seatsNumber: 100 })
                     .set("Authorization", `Bearer ${token()}`);
 
                 expect(res.status).toBe(400);
@@ -61,7 +61,7 @@ describe("Hall Routes Integration Test - editHall", () => {
             it(`returns 400 for invalid body for ${name}`, async () => {
                 const res = await request(app)
                     .put(`/api/hall/edit/${hallId}`)
-                    .send({ seats: -5 })
+                    .send({ seatsNumber: -5 })
                     .set("Authorization", `Bearer ${token()}`);
 
                 expect(res.status).toBe(400);
@@ -75,7 +75,7 @@ describe("Hall Routes Integration Test - editHall", () => {
             it(`returns 404 if hall does not exist for ${name}`, async () => {
                 const res = await request(app)
                     .put(`/api/hall/edit/${randomUUID()}`)
-                    .send({ seats: 120 })
+                    .send({ seatsNumber: 120 })
                     .set("Authorization", `Bearer ${token()}`);
 
                 expect(res.status).toBe(404);
@@ -90,7 +90,7 @@ describe("Hall Routes Integration Test - editHall", () => {
 
                 const res = await request(app)
                     .put(`/api/hall/edit/${hallId}`)
-                    .send({ seats: 120 })
+                    .send({ seatsNumber: 120 })
                     .set("Authorization", `Bearer ${token()}`);
 
                 expect(res.status).toBe(404);
@@ -109,7 +109,7 @@ describe("Hall Routes Integration Test - editHall", () => {
             it(`${name} can edit hall`, async () => {
                 const res = await request(app)
                     .put(`/api/hall/edit/${hallId}`)
-                    .send({ seats: value })
+                    .send({ seatsNumber: value })
                     .set("Authorization", `Bearer ${token()}`);
 
                 expect(res.status).toBe(200);
@@ -119,7 +119,7 @@ describe("Hall Routes Integration Test - editHall", () => {
                     where: { id: hallId }
                 });
 
-                expect(hall?.seats).toBe(value);
+                expect(hall?.seatsNumber).toBe(value);
             });
         });
     });

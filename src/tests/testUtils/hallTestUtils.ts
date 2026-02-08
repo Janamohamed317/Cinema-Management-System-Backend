@@ -22,7 +22,7 @@ export const buildHallData = () => ({
     name: `hall-${randomUUID()}`,
     type: HallType.REGULAR,
     screenType: ScreenType.SCREEN_X,
-    seats: 50,
+    seatsNumber: 50,
 });
 
 export const saveHallToDb = async () => {

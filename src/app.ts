@@ -4,6 +4,7 @@ import EmployeeManagementPath from "./routes/employeeManagementRoute";
 import moviePath from "./routes/movieRoute";
 import hallPath from "./routes/hallRoute";
 import screeningPath from "./routes/screeningRoute";
+import seatPath from "./routes/seatRoute";
 
 
 const app = express();
@@ -20,5 +21,7 @@ app.use('/api/hall', hallPath);
 app.use('/api/movie', moviePath);
 
 app.use('/api/screening', screeningPath);
+
+app.use('/api/seat', seatPath);
 
 export default app;

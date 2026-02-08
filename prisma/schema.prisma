@@ -35,6 +35,17 @@ enum ScreenType {
   SCREEN_X
 }
 
+enum SeatStatus {
+  ACTIVE
+  UNDER_MAINTENANCE
+  PERMANENTLY_REMOVED
+}
+
+enum TicketStatus {
+  PAID
+  REFUNDED
+}
+
 model User {
   id        String    @id @default(uuid())
   createdAt DateTime  @default(now())
@@ -44,6 +55,7 @@ model User {
   role      Role      @default(USER)
   verified  Boolean   @default(false)
   deletedAt DateTime?
+  tickets   Ticket[]
 
   @@index([deletedAt])
 }
@@ -60,13 +72,14 @@ model Movie {
 }
 
 model Hall {
-  id         String      @id @default(uuid())
-  name       String      @unique
-  type       HallType
-  screenType ScreenType
-  seats      Int
-  deletedAt  DateTime?
-  screenings Screening[]
+  id          String      @id @default(uuid())
+  name        String      @unique
+  type        HallType
+  screenType  ScreenType
+  seatsNumber Int
+  deletedAt   DateTime?
+  screenings  Screening[]
+  seats       Seat[]
 
   @@index([deletedAt])
 }
@@ -77,9 +90,40 @@ model Screening {
   movie     Movie     @relation(fields: [movieId], references: [id])
   hallId    String
   movieId   String
-  startTime DateTime 
+  startTime DateTime
   deletedAt DateTime?
+  tickets   Ticket[]
 
   @@unique([hallId, startTime])
   @@index([deletedAt])
+}
+
+model Seat {
+  id         String     @id @default(uuid())
+  status     SeatStatus @default(ACTIVE)
+  seatNumber Int
+  hall       Hall       @relation(fields: [hallId], references: [id])
+  hallId     String
+  createdAt  DateTime   @default(now())
+  deletedAt  DateTime?
+  tickets    Ticket[]
+
+  @@unique([hallId, seatNumber])
+  @@index([deletedAt])
+}
+
+model Ticket {
+  id          String       @id @default(uuid())
+  status      TicketStatus
+  screening   Screening    @relation(fields: [screeningId], references: [id])
+  screeningId String
+  user        User         @relation(fields: [userId], references: [id])
+  userId      String
+  seat        Seat         @relation(fields: [seatId], references: [id])
+  seatId      String
+  createdAt   DateTime     @default(now())
+  deletedAt   DateTime?
+
+  @@unique([screeningId, seatId])
+  @@index([deletedAt, userId])
 }
