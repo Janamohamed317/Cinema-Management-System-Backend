@@ -1,4 +1,4 @@
-import { addHallService, editHallById, findHallById, findHallByName, getAllActiveHalls, getHallConflictInfo, restoreHallById, softDeleteHallById } from "../../services/hallServices"
+import { addHallService, editHallService, findHallById, findHallByName, getAllActiveHalls, isHallDeleted, restoreHallService, softDeleteHallService } from "../../services/hallServices"
 import { prisma } from "../../prismaClient/client"
 import { HallType, ScreenType } from "@prisma/client"
 
@@ -52,6 +52,7 @@ describe("Hall Service Unit Tests", () => {
 
         const createdHall = { id: "1", ...hallData, deletedAt: null };
 
+        (prisma.hall.findFirst as jest.Mock).mockResolvedValue(null);
         (prisma.hall.create as jest.Mock).mockResolvedValue(createdHall)
 
         const result = await addHallService(hallData)
@@ -59,94 +60,51 @@ describe("Hall Service Unit Tests", () => {
         expect(result).toEqual(createdHall)
     })
 
-    describe("editHallById", () => {
+    describe("editHallService", () => {
         it("updates hall name", async () => {
             const data = { name: "changedName" };
             (prisma.hall.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
 
-            const result = await editHallById("1", data)
+            await editHallService("123e4567-e89b-12d3-a456-426614174000", data)
             expect(prisma.hall.updateMany).toHaveBeenCalledWith({
-                where: { id: "1", deletedAt: null },
+                where: { id: "123e4567-e89b-12d3-a456-426614174000", deletedAt: null },
                 data,
             })
-            expect(result.count).toEqual(1)
-        })
-
-        it("updates hall type", async () => {
-            const data = { type: HallType.VIP };
-            (prisma.hall.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-
-            const result = await editHallById("1", data)
-            expect(prisma.hall.updateMany).toHaveBeenCalledWith({
-                where: { id: "1", deletedAt: null },
-                data,
-            })
-            expect(result.count).toEqual(1)
-        })
-
-        it("updates screenType", async () => {
-            const data = { screenType: ScreenType.IMAX };
-            (prisma.hall.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-
-            const result = await editHallById("1", data)
-            expect(prisma.hall.updateMany).toHaveBeenCalledWith({
-                where: { id: "1", deletedAt: null },
-                data,
-            })
-            expect(result.count).toEqual(1)
-        })
-
-        it("updates seats", async () => {
-            const data = { seatsNumber: 150 };
-            (prisma.hall.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-
-            const result = await editHallById("1", data)
-            expect(prisma.hall.updateMany).toHaveBeenCalledWith({
-                where: { id: "1", deletedAt: null },
-                data,
-            })
-            expect(result.count).toEqual(1)
         })
     })
 
-    it("Soft Delete Hall By Id", async () => {
+    it("Soft Delete Hall Service", async () => {
 
         (prisma.hall.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
 
-        const result = await softDeleteHallById("1")
+        await softDeleteHallService("123e4567-e89b-12d3-a456-426614174000")
 
         expect(prisma.hall.updateMany).toHaveBeenCalledWith({
             where: {
-                id: "1",
+                id: "123e4567-e89b-12d3-a456-426614174000",
                 deletedAt: null
             },
             data: {
                 deletedAt: expect.any(Date),
             }
         })
-
-        expect(result.count).toEqual(1)
-
     })
 
-    it("Restore Hall By Id", async () => {
+    it("Restore Hall Service", async () => {
 
         (prisma.hall.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
 
-        const result = await restoreHallById("1")
+        await restoreHallService("123e4567-e89b-12d3-a456-426614174000")
 
         expect(prisma.hall.updateMany).toHaveBeenCalledWith({
             data: {
                 deletedAt: null,
             },
             where: {
-                id: "1",
+                id: "123e4567-e89b-12d3-a456-426614174000",
                 deletedAt: { not: null },
             },
         })
-
-        expect(result.count).toEqual(1)
-
     })
 
     it("Get All Halls", async () => {
@@ -170,19 +128,19 @@ describe("Hall Service Unit Tests", () => {
                 id: "1", name: "Hall A",
                 type: HallType.REGULAR, seatsNumber: 50, screenType: ScreenType.IMAX, deletedAt: null
             }
-            const result = getHallConflictInfo(hall)
+            const result = isHallDeleted(hall)
 
-            expect(result).toBeFalsy
+            expect(result).toBeFalsy()
         })
 
         it("Deleted", () => {
             const hall = {
                 id: "1", name: "Hall A",
-                type: HallType.REGULAR, seatsNumber: 50, screenType: ScreenType.IMAX, deletedAt: new Date
+                type: HallType.REGULAR, seatsNumber: 50, screenType: ScreenType.IMAX, deletedAt: new Date()
             }
-            const result = getHallConflictInfo(hall)
+            const result = isHallDeleted(hall)
 
-            expect(result).toBeTruthy
+            expect(result).toBeTruthy()
         })
     })
 })

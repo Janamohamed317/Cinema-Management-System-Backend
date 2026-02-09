@@ -6,7 +6,7 @@ import {
   editMovie,
   deleteMovie,
   restoreMovie,
-  getAllMovies,
+  getAllMoviesController as getAllMovies,
 } from "../controllers/movieController"
 
 const router = express.Router()

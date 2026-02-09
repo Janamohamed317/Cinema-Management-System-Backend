@@ -1,4 +1,4 @@
-import { assignRole, checkEmailExistance, CreateUser, findUserByEmailOrUsername, registerEmployee, signupUser } from "../../services/userServices"
+import { assignRoleService, checkEmailExistance, CreateUser, findUserByEmailOrUsername, registerEmployeeService, signupUserService } from "../../services/userServices"
 import { prisma } from "../../prismaClient/client"
 import { hashPassword } from "../../utils/hash"
 import { Role } from "@prisma/client"
@@ -53,7 +53,7 @@ describe("User Services Unit Test", () => {
     })
 
     it("Create User", async () => {
-     
+
         const createdUser = { id: "2", role: "USER", ...fakeUser, password: "hashedPassword" }
 
         const testUserWithHashedPassword = { ...fakeUser, password: "hashedPassword", role: "USER" };
@@ -68,29 +68,25 @@ describe("User Services Unit Test", () => {
         expect(hashPassword).toHaveBeenCalledWith(fakeUser.password)
     })
 
-    describe("assignRole", () => {
+    describe("assignRoleService", () => {
         it("successfully assigns role to an unassigned user", async () => {
+            const user = { id: "user-1", role: Role.UNASSIGNED, username: "test" };
+            (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
             (prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
 
-            const result = await assignRole("user-1", Role.MOVIES_MANAGER);
+            const result = await assignRoleService("user-1", Role.MOVIES_MANAGER);
 
             expect(prisma.user.updateMany).toHaveBeenCalledWith({
                 where: { id: "user-1", role: Role.UNASSIGNED },
                 data: { role: Role.MOVIES_MANAGER },
             });
 
-            expect(result.count).toBe(1);
+            expect(result).toEqual(user);
         });
 
-        it("does not assign role if user already has a role", async () => {
-            (prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
-            const result = await assignRole("user-123", Role.MOVIES_MANAGER);
-            expect(prisma.user.updateMany).toHaveBeenCalledWith({
-                where: { id: "user-123", role: Role.UNASSIGNED },
-                data: { role: Role.MOVIES_MANAGER },
-            });
-
-            expect(result.count).toBe(0);
+        it("throws error if user already has a role", async () => {
+            (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: "user-1", role: Role.USER });
+            await expect(assignRoleService("user-1", Role.MOVIES_MANAGER)).rejects.toThrow("Can't Assign That Type of User");
         });
     });
 

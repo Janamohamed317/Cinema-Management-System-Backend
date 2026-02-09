@@ -7,9 +7,7 @@ describe("Auth Routes Integration Test - Signin", () => {
     const fakeUser = buildFakeUser()
 
     beforeAll(async () => {
-        // Ensure clean state or setup user
         await prisma.user.deleteMany({ where: { email: fakeUser.email } });
-        // Create the user for signin tests
         await request(app).post("/api/auth/signup").send(fakeUser);
     });
 
@@ -17,7 +15,6 @@ describe("Auth Routes Integration Test - Signin", () => {
         await prisma.user.deleteMany({ where: { email: fakeUser.email } });
     });
 
-    // Signin tests
     describe("POST /api/auth/signin", () => {
         it("should return 400 if body is invalid", async () => {
             const res = await request(app)

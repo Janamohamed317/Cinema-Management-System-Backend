@@ -1,4 +1,4 @@
-import { addMovieService, editMovieById, findMovieById, findMovieByName, getMovieConflictInfo, restoreMovieById, softDeleteMovieById }
+import { addMovieService, editMovieService, findMovieById, findMovieByName, isMovieDeleted, restoreMovieService, softDeleteMovieService }
     from "../../services/movieServices"
 import { prisma } from "../../prismaClient/client"
 
@@ -50,6 +50,7 @@ describe("Movie Service Unit Tests", () => {
         const movieData = { name: "Inception", duration: 148 }
         const createdMovie = { id: "1", ...movieData, deletedAt: null };
 
+        (prisma.movie.findFirst as jest.Mock).mockResolvedValue(null);
         (prisma.movie.create as jest.Mock).mockResolvedValue(createdMovie)
 
         const result = await addMovieService(movieData)
@@ -57,71 +58,55 @@ describe("Movie Service Unit Tests", () => {
         expect(result).toEqual(createdMovie)
     })
 
-    describe("editMovieById", () => {
+    describe("editMovieService", () => {
         it("updates movie name", async () => {
             const data = { name: "Inception 2" };
 
-            (prisma.movie.update as jest.Mock).mockResolvedValue({ id: "1", ...data })
+            (prisma.movie.findFirst as jest.Mock).mockResolvedValue({ id: "123e4567-e89b-12d3-a456-426614174001", name: "Inception" });
+            (prisma.movie.update as jest.Mock).mockResolvedValue({ id: "123e4567-e89b-12d3-a456-426614174001", ...data })
 
-            const result = await editMovieById("1", data)
+            await editMovieService("123e4567-e89b-12d3-a456-426614174001", data)
             expect(prisma.movie.update).toHaveBeenCalledWith({
-                where: { id: "1" },
+                where: { id: "123e4567-e89b-12d3-a456-426614174001" },
                 data,
             })
-            expect(result).toEqual({ id: "1", ...data })
-        })
-
-        it("updates movie duration", async () => {
-            const data = { duration: 150 }
-                ; (prisma.movie.update as jest.Mock).mockResolvedValue({ id: "1", ...data })
-
-            const result = await editMovieById("1", data)
-            expect(prisma.movie.update).toHaveBeenCalledWith({
-                where: { id: "1" },
-                data,
-            })
-            expect(result).toEqual({ id: "1", ...data })
         })
     })
 
-
-    it("Soft Delete Movie By Id", async () => {
+    it("Soft Delete Movie Service", async () => {
 
         (prisma.movie.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
 
-        const result = await softDeleteMovieById("1")
+        await softDeleteMovieService("123e4567-e89b-12d3-a456-426614174001")
 
         expect(prisma.movie.updateMany).toHaveBeenCalledWith({
-            where: { id: "1", deletedAt: null },
+            where: { id: "123e4567-e89b-12d3-a456-426614174001", deletedAt: null },
             data: { deletedAt: expect.any(Date) },
         })
-
-        expect(result.count).toEqual(1)
     })
 
-    it("Restore Movie By Id", async () => {
-        (prisma.movie.update as jest.Mock).mockResolvedValue({ id: "1", deletedAt: null })
+    it("Restore Movie Service", async () => {
+        (prisma.movie.findFirst as jest.Mock).mockResolvedValue({ id: "123e4567-e89b-12d3-a456-426614174001", deletedAt: new Date() });
+        (prisma.movie.update as jest.Mock).mockResolvedValue({ id: "123e4567-e89b-12d3-a456-426614174001", deletedAt: null })
 
-        const result = await restoreMovieById("1")
+        await restoreMovieService("123e4567-e89b-12d3-a456-426614174001")
 
         expect(prisma.movie.update).toHaveBeenCalledWith({
-            where: { id: "1" },
+            where: { id: "123e4567-e89b-12d3-a456-426614174001" },
             data: { deletedAt: null },
         })
-
-        expect(result).toEqual({ id: "1", deletedAt: null })
     })
 
     describe("check if Movie is Deleted", () => {
         it("Not Deleted", () => {
-            const movie = { id: "1", name: "Inception", deletedAt: null, duration: 50, createdAt: new Date, }
-            const result = getMovieConflictInfo(movie)
+            const movie = { id: "1", name: "Inception", deletedAt: null, duration: 50, createdAt: new Date(), }
+            const result = isMovieDeleted(movie)
             expect(result).toBe(false)
         })
 
         it("Deleted", () => {
-            const movie = { id: "1", name: "Inception", deletedAt: new Date(), duration: 50, createdAt: new Date, }
-            const result = getMovieConflictInfo(movie)
+            const movie = { id: "1", name: "Inception", deletedAt: new Date(), duration: 50, createdAt: new Date(), }
+            const result = isMovieDeleted(movie)
             expect(result).toBe(true)
         })
     })

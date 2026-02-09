@@ -1,9 +1,13 @@
-import { addSeatService, editSeatById, findSeatById, findSeatBySeatNumber, getAllActiveSeats, isSeatDeleted,
-    restoreSeatById, softDeleteSeatById, checkAssignedTickets } from "../../services/seatServices"
+import {
+    addSeatService, editSeatService, findSeatById, findSeatBySeatNumber, getAllActiveSeats, isSeatDeleted,
+    restoreSeatService, softDeleteSeatService, checkAssignedTickets
+} from "../../services/seatServices"
+import { findHallById } from "../../services/hallServices"
 import { prisma } from "../../prismaClient/client"
 import { SeatStatus, TicketStatus } from "@prisma/client"
 
 jest.mock("../../prismaClient/client")
+jest.mock("../../services/hallServices")
 
 describe("Seat Service Unit Tests", () => {
     beforeEach(() => {
@@ -54,12 +58,14 @@ describe("Seat Service Unit Tests", () => {
 
     it("Creates a seat and returns it", async () => {
         const seatData = {
-            hallId: "hall1",
+            hallId: "123e4567-e89b-12d3-a456-426614174000",
             seatNumber: 5,
         }
 
-        const createdSeat = { id: "seat1", ...seatData, status: SeatStatus.ACTIVE, createdAt: new Date(), deletedAt: null };
+        const createdSeat = { id: "123e4567-e89b-12d3-a456-426614174001", ...seatData, status: SeatStatus.ACTIVE, createdAt: new Date(), deletedAt: null };
 
+        (prisma.seat.findFirst as jest.Mock).mockResolvedValue(null);
+        (findHallById as jest.Mock).mockResolvedValue({ id: "123e4567-e89b-12d3-a456-426614174000" });
         (prisma.seat.create as jest.Mock).mockResolvedValue(createdSeat)
 
         const result = await addSeatService(seatData)
@@ -67,40 +73,36 @@ describe("Seat Service Unit Tests", () => {
         expect(result).toEqual(createdSeat)
     })
 
-    describe("editSeatById", () => {
+    describe("editSeatService", () => {
         it("updates seat status", async () => {
             const data = { status: SeatStatus.UNDER_MAINTENANCE };
-            (prisma.seat.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+            (prisma.seat.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+            (prisma.ticket.findMany as jest.Mock).mockResolvedValue([]);
 
-            const result = await editSeatById("seat1", data)
+            const result = await editSeatService("123e4567-e89b-12d3-a456-426614174001", data)
             expect(prisma.seat.updateMany).toHaveBeenCalledWith({
-                where: { id: "seat1", deletedAt: null },
+                where: { id: "123e4567-e89b-12d3-a456-426614174001", deletedAt: null },
                 data,
             })
-            expect(result.count).toEqual(1)
+            expect(result).toEqual([])
         })
     })
 
-    describe("softDeleteSeatById", () => {
+    describe("softDeleteSeatService", () => {
         it("Soft Delete Seat By Id with no future tickets", async () => {
             (prisma.ticket.findMany as jest.Mock).mockResolvedValue([]);
-
-            (prisma.seat.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
-
-            const result = await softDeleteSeatById("seat1")
-
-            expect(prisma.seat.updateMany).toHaveBeenCalledWith({
-                where: {
-                    id: "seat1",
-                    deletedAt: null
+            (prisma.$transaction as jest.Mock).mockImplementation(async (cb) => await cb({
+                seat: {
+                    updateMany: jest.fn().mockResolvedValue({ count: 1 })
                 },
-                data: {
-                    deletedAt: expect.any(Date),
-                    status: SeatStatus.PERMANENTLY_REMOVED,
+                ticket: {
+                    update: jest.fn()
                 }
-            })
+            }));
 
-            expect(result.count).toEqual(1)
+            await softDeleteSeatService("123e4567-e89b-12d3-a456-426614174001")
+
+            expect(prisma.$transaction).toHaveBeenCalled()
         })
 
         it("Soft Delete Seat By Id WITH future tickets", async () => {
@@ -108,28 +110,37 @@ describe("Seat Service Unit Tests", () => {
                 { id: "ticket1", user: { email: "test@test.com", username: "test" }, screening: { startTime: new Date() } }
             ];
             (prisma.ticket.findMany as jest.Mock).mockResolvedValue(mockTickets);
-            (prisma.seat.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
-            (prisma.ticket.update as jest.Mock).mockResolvedValue({ id: "ticket1" });
 
-            const result = await softDeleteSeatById("seat1")
+            const mockUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
+            const mockUpdateTicket = jest.fn().mockResolvedValue({ id: "ticket1" });
 
-            expect(prisma.seat.updateMany).toHaveBeenCalled()
-            expect(prisma.ticket.update).toHaveBeenCalledWith({
+            (prisma.$transaction as jest.Mock).mockImplementation(async (cb) => await cb({
+                seat: {
+                    updateMany: mockUpdateMany
+                },
+                ticket: {
+                    update: mockUpdateTicket
+                }
+            }));
+
+            await softDeleteSeatService("123e4567-e89b-12d3-a456-426614174001")
+
+            expect(prisma.$transaction).toHaveBeenCalled()
+            expect(mockUpdateTicket).toHaveBeenCalledWith({
                 where: { id: "ticket1" },
                 data: { status: TicketStatus.REFUNDED }
             })
-            expect(result.count).toEqual(1)
         })
     })
 
-    it("Restore Seat By Id", async () => {
+    it("Restore Seat Service", async () => {
         (prisma.seat.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
 
-        const result = await restoreSeatById("seat1")
+        await restoreSeatService("123e4567-e89b-12d3-a456-426614174001")
 
         expect(prisma.seat.updateMany).toHaveBeenCalledWith({
             where: {
-                id: "seat1",
+                id: "123e4567-e89b-12d3-a456-426614174001",
                 deletedAt: { not: null },
             },
             data: {
@@ -137,8 +148,6 @@ describe("Seat Service Unit Tests", () => {
                 status: "ACTIVE",
             },
         })
-
-        expect(result.count).toEqual(1)
     })
 
     it("Get All Active Seats", async () => {

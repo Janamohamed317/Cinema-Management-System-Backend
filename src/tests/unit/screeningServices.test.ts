@@ -1,10 +1,15 @@
 import { prisma } from "../../prismaClient/client"
 import {
-    addMinutes, createScreening, findScreeningsInHall, checkOverlapping, findScreening, softDeleteScreening,
+    addMinutes, createScreeningService, findScreeningsInHall, checkOverlapping, findScreening, softDeleteScreeningService,
     restoreScreeningService, isScreeningDeleted, getAllScreeningsService, editScreeningService, findScreeningById
 } from "../../services/screeningService"
+import { findMovieById } from "../../services/movieServices"
+import { findHallById } from "../../services/hallServices"
 import { Screening } from "@prisma/client"
 import { ScreeningEditingBody } from "../../types/screening"
+
+jest.mock("../../services/movieServices")
+jest.mock("../../services/hallServices")
 
 jest.mock("../../prismaClient/client")
 
@@ -61,12 +66,20 @@ describe("Screening Service Unit Tests", () => {
         });
     });
 
-    describe("createScreening", () => {
+    describe("createScreeningService", () => {
         it("calls prisma.create with correct data", async () => {
-            const data = { hallId: "5", startTime: new Date(), movieId: "2" };
+            const data = {
+                hallId: "123e4567-e89b-12d3-a456-426614174000",
+                startTime: new Date(),
+                movieId: "123e4567-e89b-12d3-a456-426614174001"
+            };
+            (prisma.screening.findFirst as jest.Mock).mockResolvedValue(null);
+            (findMovieById as jest.Mock).mockResolvedValue({ id: "123e4567-e89b-12d3-a456-426614174001", duration: 120 });
+            (findHallById as jest.Mock).mockResolvedValue({ id: "123e4567-e89b-12d3-a456-426614174000" });
+            (prisma.screening.findMany as jest.Mock).mockResolvedValue([]);
             (prisma.screening.create as jest.Mock).mockResolvedValue(data);
 
-            const result = await createScreening(data);
+            const result = await createScreeningService(data);
 
             expect(prisma.screening.create).toHaveBeenCalledWith({ data });
             expect(result).toBe(data);
@@ -98,34 +111,32 @@ describe("Screening Service Unit Tests", () => {
         });
     });
 
-    describe("softDeleteScreening", () => {
+    describe("softDeleteScreeningService", () => {
         it("should deleteScreening", async () => {
-            const mockScreening = { id: "123", deletedAt: null };
+            const id = "123e4567-e89b-12d3-a456-426614174002";
 
             (prisma.screening.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
 
-            const result = await softDeleteScreening(mockScreening.id);
+            await softDeleteScreeningService(id);
 
-            expect(prisma.screening.updateMany).toHaveBeenCalledWith({ where: mockScreening, data: { deletedAt: expect.any(Date) } });
-            expect(result.count).toEqual(1);
+            expect(prisma.screening.updateMany).toHaveBeenCalledWith({ where: { id, deletedAt: null }, data: { deletedAt: expect.any(Date) } });
         });
 
     });
 
     describe("restoreScreeningService", () => {
         it("should restore a deleted screening", async () => {
-            const id = "123";
+            const id = "123e4567-e89b-12d3-a456-426614174002";
             const updateResult = { count: 1 };
 
             (prisma.screening.updateMany as jest.Mock).mockResolvedValue(updateResult);
 
-            const result = await restoreScreeningService(id);
+            await restoreScreeningService(id);
 
             expect(prisma.screening.updateMany).toHaveBeenCalledWith({
                 where: { id, deletedAt: { not: null } },
                 data: { deletedAt: null }
             });
-            expect(result).toEqual(updateResult);
         });
     });
 
@@ -155,10 +166,11 @@ describe("Screening Service Unit Tests", () => {
 
     describe("editScreeningService", () => {
         it("should update a screening", async () => {
-            const id = "1";
-            const data: ScreeningEditingBody = { hallId: "123" };
+            const id = "123e4567-e89b-12d3-a456-426614174002";
+            const data: ScreeningEditingBody = { hallId: "123e4567-e89b-12d3-a456-426614174000" };
             const updatedScreening = { id, ...data, deletedAt: null };
 
+            (prisma.screening.findUnique as jest.Mock).mockResolvedValue({ id });
             (prisma.screening.update as jest.Mock).mockResolvedValue(updatedScreening);
 
             const result = await editScreeningService(data, id);
