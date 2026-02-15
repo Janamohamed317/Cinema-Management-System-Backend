@@ -14,3 +14,9 @@ export type TicketWithUserAndScreening = {
     userId: string;
     seatId: string;
 }
+
+export type TicketAddingBody = {
+    screeningId: string
+    userId: string
+    seatIDs: string[]
+}

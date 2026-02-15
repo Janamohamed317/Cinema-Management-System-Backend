@@ -5,6 +5,7 @@ import moviePath from "./routes/movieRoute";
 import hallPath from "./routes/hallRoute";
 import screeningPath from "./routes/screeningRoute";
 import seatPath from "./routes/seatRoute";
+import ticketPath from "./routes/ticketRoute";
 import { errorHandler } from "./middlewares/errorHandler";
 
 
@@ -25,6 +26,8 @@ app.use('/api/screening', screeningPath);
 
 app.use('/api/seat', seatPath);
 
-app.use(errorHandler) 
+app.use('/api/ticket', ticketPath);
+
+app.use(errorHandler)
 
 export default app;
