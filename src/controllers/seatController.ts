@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { SeatAddingBody, SeatEditingBody } from "../types/seat";
-import { addSeatService, softDeleteSeatService, editSeatService, restoreSeatService, getAllActiveSeats } from "../services/seatServices";
+import { addSeatService, softDeleteSeatService, editSeatService, restoreSeatService, getAvailableSeats as getAvailableSeatsService } from "../services/seatServices";
 
 export const addSeat = asyncHandler(async (req: Request<{}, {}, SeatAddingBody>, res: Response) => {
     const seat = await addSeatService(req.body)
@@ -27,7 +27,7 @@ export const restoreSeat = asyncHandler(async (req: Request<{ id: string }>, res
     res.status(200).json({ message: "Seat Restored Successfully" })
 })
 
-export const getAllSeats = asyncHandler(async (req: Request, res: Response) => {
-    const seats = await getAllActiveSeats()
+export const getAvailableSeats = asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
+    const seats = await getAvailableSeatsService(req.params.id)
     res.status(200).json(seats)
 })

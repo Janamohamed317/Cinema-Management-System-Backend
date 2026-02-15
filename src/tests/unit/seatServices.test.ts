@@ -1,7 +1,5 @@
-import {
-    addSeatService, editSeatService, findSeatById, findSeatBySeatNumber, getAllActiveSeats, isSeatDeleted,
-    restoreSeatService, softDeleteSeatService, checkAssignedTickets
-} from "../../services/seatServices"
+import { addSeatService, editSeatService, findSeatById, findSeatBySeatNumber, isSeatDeleted, restoreSeatService, 
+    softDeleteSeatService, checkAssignedTickets, getAvailableSeats } from "../../services/seatServices"
 import { findHallById } from "../../services/hallServices"
 import { prisma } from "../../prismaClient/client"
 import { SeatStatus, TicketStatus } from "@prisma/client"
@@ -150,21 +148,47 @@ describe("Seat Service Unit Tests", () => {
         })
     })
 
-    it("Get All Active Seats", async () => {
-        const mockSeats = [
-            { id: "seat1", seatNumber: 1, hallId: "hall1" },
-            { id: "seat2", seatNumber: 2, hallId: "hall1" }
-        ];
-        (prisma.seat.findMany as jest.Mock).mockResolvedValue(mockSeats)
+    describe("getAvailableSeats", () => {
+        it("returns available seats for a valid screening", async () => {
+            const mockScreening = { id: "screening1", hallId: "hall1" }
+            const mockSeats = [
+                { id: "seat1", seatNumber: 1, hallId: "hall1", status: SeatStatus.ACTIVE },
+                { id: "seat2", seatNumber: 2, hallId: "hall1", status: SeatStatus.ACTIVE }
+            ];
 
-        const result = await getAllActiveSeats()
+            (prisma.screening.findUnique as jest.Mock).mockResolvedValue(mockScreening);
+            (prisma.seat.findMany as jest.Mock).mockResolvedValue(mockSeats);
 
-        expect(prisma.seat.findMany).toHaveBeenCalledWith({
-            where: { deletedAt: null }
+            const result = await getAvailableSeats("screening1")
+
+            expect(prisma.screening.findUnique).toHaveBeenCalledWith({
+                where: { id: "screening1", deletedAt: null }
+            })
+
+            expect(prisma.seat.findMany).toHaveBeenCalledWith({
+                where: {
+                    hallId: "hall1",
+                    deletedAt: null,
+                    status: SeatStatus.ACTIVE,
+                    tickets: {
+                        none: {
+                            screeningId: "screening1",
+                            deletedAt: null,
+                            status: TicketStatus.PAID
+                        }
+                    }
+                }
+            })
+
+            expect(result).toEqual(mockSeats)
         })
 
-        expect(result.length).toEqual(2)
-        expect(result).toEqual(mockSeats)
+        it("throws error when screening not found", async () => {
+            (prisma.screening.findUnique as jest.Mock).mockResolvedValue(null)
+
+            await expect(getAvailableSeats("invalid-screening"))
+                .rejects.toThrow("Screening not found")
+        })
     })
 
     describe("check if Seat is Deleted (isSeatDeleted)", () => {

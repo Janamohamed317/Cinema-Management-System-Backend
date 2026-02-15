@@ -113,9 +113,28 @@ export const restoreSeatService = async (id: string) => {
     }
 }
 
-export const getAllActiveSeats = async () => {
+export const getAvailableSeats = async (screeningId: string) => {
+    const screening = await prisma.screening.findUnique({
+        where: { id: screeningId, deletedAt: null }
+    })
+
+    if (!screening) {
+        throw new NotFoundError("Screening not found")
+    }
+
     return await prisma.seat.findMany({
-        where: { deletedAt: null },
+        where: {
+            hallId: screening.hallId,
+            deletedAt: null,
+            status: SeatStatus.ACTIVE,
+            tickets: {
+                none: {
+                    screeningId: screeningId,
+                    deletedAt: null,
+                    status: TicketStatus.PAID
+                }
+            }
+        },
     })
 }
 

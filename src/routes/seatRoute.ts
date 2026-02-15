@@ -1,6 +1,6 @@
 import express from "express"
 import { verifyToken } from "../middlewares/verifyToken"
-import { addSeat, deleteSeat, getAllSeats, editSeat, restoreSeat } from "../controllers/seatController"
+import { addSeat, deleteSeat, editSeat, restoreSeat, getAvailableSeats } from "../controllers/seatController"
 import { requireHallManagementAccess } from "../middlewares/rolesMiddleware"
 
 const router = express.Router()
@@ -13,6 +13,6 @@ router.delete("/delete/:id", verifyToken, requireHallManagementAccess, deleteSea
 
 router.put("/restore/:id", verifyToken, requireHallManagementAccess, restoreSeat)
 
-router.get("/all", verifyToken, requireHallManagementAccess, getAllSeats)
+router.get("/available-seats/:id", verifyToken, requireHallManagementAccess, getAvailableSeats)
 
 export default router
