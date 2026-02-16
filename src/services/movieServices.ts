@@ -62,7 +62,13 @@ export const editMovieService = async (id: string, data: MovieEditingBody) => {
         throw new BadRequestError(error.details[0].message);
     }
 
-    await prisma.movie.update({
+    if (data.name) {
+        const existingMovie = await findMovieByName(data.name)
+        if (existingMovie && existingMovie.id !== id) {
+            throw new ConflictError("Movie with this name already exists")
+        }
+    }
+    return await prisma.movie.update({
         where: { id },
         data
     });
@@ -89,7 +95,7 @@ export const restoreMovieService = async (id: string) => {
     });
 }
 
-export const getAllMovies = async () => {
+export const getAllMoviesService = async () => {
     return await prisma.movie.findMany({
         where: { deletedAt: null },
     });

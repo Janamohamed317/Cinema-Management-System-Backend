@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import { addMovieService, softDeleteMovieService, editMovieService, restoreMovieService, getAllMovies } from "../services/movieServices";
+import { addMovieService, softDeleteMovieService, editMovieService, restoreMovieService, getAllMoviesService } from "../services/movieServices";
+import { findMovieScreening } from "../services/screeningService";
 import { MovieAddingBody, MovieEditingBody } from "../types/movie";
 
 export const addMovie = asyncHandler(async (req: Request<{}, {}, MovieAddingBody>, res: Response) => {
@@ -23,7 +24,12 @@ export const restoreMovie = asyncHandler(async (req: Request<{ id: string }>, re
     res.status(200).json({ message: "Movie restored successfully" });
 });
 
-export const getAllMoviesController = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-    const movies = await getAllMovies();
+export const getAllMovies = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+    const movies = await getAllMoviesService();
     res.status(200).json(movies);
+});
+
+export const getMovieScreenings = asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
+    const screenings = await findMovieScreening(req.params.id);
+    res.status(200).json(screenings);
 });

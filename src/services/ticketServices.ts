@@ -5,9 +5,7 @@ import { findScreeningById } from "./screeningService";
 import { validateTicketReservation, validateTicketId, validateScreeningId } from "../utils/validations/ticketValidation";
 import { TicketAddingBody } from "../types/ticket";
 
-export const reserveTicketService = async (data: Omit<TicketAddingBody, "userId">, userId: string) => {
-    // Construct the full object for validation if needed, or validate parts
-    // For now, let's validate the data we have
+export const reserveTicketService = async (data: TicketAddingBody, userId: string) => {
     const { error } = validateTicketReservation({ ...data, userId });
     if (error) {
         throw new BadRequestError(error.details[0].message);
@@ -50,7 +48,7 @@ export const reserveTicketService = async (data: Omit<TicketAddingBody, "userId"
 }
 
 export const cancelAllTicketsForScreeningService = async (screeningId: string, userId: string) => {
-    const { error } = validateScreeningId({ screeningId });
+    const { error } = validateScreeningId(screeningId);
     if (error) {
         throw new BadRequestError(error.details[0].message);
     }
@@ -82,7 +80,7 @@ export const cancelAllTicketsForScreeningService = async (screeningId: string, u
 }
 
 export const cancelTicketService = async (ticketId: string, userId: string) => {
-    const { error } = validateTicketId({ id: ticketId });
+    const { error } = validateTicketId(ticketId);
     if (error) {
         throw new BadRequestError(error.details[0].message);
     }
@@ -116,14 +114,22 @@ export const checkTicketBeforeDeletionService = (startTime: Date) => {
 }
 
 export const findUserTicketsService = async (userId: string) => {
-    return await prisma.ticket.findMany({ where: { userId } })
+    return await prisma.ticket.findMany({
+        where: { userId, deletedAt: null }, include: {
+            screening: { include: { movie: true, hall: true } },
+            seat: true
+        },
+        orderBy: { createdAt: 'desc' }
+    })
 }
+
 export const getTicketDetailsService = async (id: string) => {
     const ticket = await prisma.ticket.findFirst({ where: { id, deletedAt: null }, include: { screening: true, seat: true } })
     return ticket
 }
 
 export const getScreeningTicketsService = async (id: string) => {
-    const tickets = await prisma.ticket.findMany({ where: { screeningId: id, deletedAt: null } })
-    return tickets
+    return await prisma.ticket.findMany({
+        where: { screeningId: id, deletedAt: null }, include: { user: { select: { username: true, email: true } }, seat: true }
+    })
 }

@@ -109,7 +109,13 @@ export const isScreeningDeleted = (screening: Screening) => {
 }
 
 export const getAllScreeningsService = async () => {
-  return await prisma.screening.findMany({ where: { deletedAt: null } })
+  return await prisma.screening.findMany({
+    where: { deletedAt: null }, include: {
+      movie: { select: { name: true, duration: true } },
+      hall: { select: { name: true, type: true } }
+    },
+    orderBy: { startTime: 'asc' }
+  })
 }
 
 export const editScreeningService = async (data: ScreeningEditingBody, id: string) => {
@@ -128,4 +134,23 @@ export const editScreeningService = async (data: ScreeningEditingBody, id: strin
 
 export const findScreeningById = async (id: string) => {
   return await prisma.screening.findUnique({ where: { id } })
+}
+
+export const findMovieScreening = async (id: string) => {
+  return await prisma.screening.findMany({
+    where: { movieId: id, deletedAt: null, startTime: { gte: new Date() } },
+    include: { hall: { select: { name: true, type: true } } },
+    orderBy: { startTime: 'asc' }
+  })
+}
+
+export const getScreeningDetailsById = async (id: string) => {
+  const screening = await prisma.screening.findUnique({where: { id },include: {movie: { select: { name: true, duration: true } },
+      hall: { select: { name: true, type: true, screenType: true } }}})
+
+  if (!screening || screening.deletedAt !== null) {
+    throw new NotFoundError("Screening not found")
+  }
+
+  return screening
 }

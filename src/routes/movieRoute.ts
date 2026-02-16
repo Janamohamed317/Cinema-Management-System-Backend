@@ -1,13 +1,7 @@
 import express from "express"
 import { verifyToken } from "../middlewares/verifyToken"
 import { requireMovieManagementAccess } from "../middlewares/rolesMiddleware"
-import {
-  addMovie,
-  editMovie,
-  deleteMovie,
-  restoreMovie,
-  getAllMoviesController as getAllMovies,
-} from "../controllers/movieController"
+import { addMovie, editMovie, deleteMovie, restoreMovie, getAllMovies, getMovieScreenings, } from "../controllers/movieController"
 
 const router = express.Router()
 
@@ -20,5 +14,7 @@ router.delete("/delete/:id", verifyToken, requireMovieManagementAccess, deleteMo
 router.put("/restore/:id", verifyToken, requireMovieManagementAccess, restoreMovie)
 
 router.get("/all", verifyToken, getAllMovies)
+
+router.get("/:id/screenings", verifyToken, getMovieScreenings)
 
 export default router

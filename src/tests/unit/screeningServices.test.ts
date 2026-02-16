@@ -159,7 +159,14 @@ describe("Screening Service Unit Tests", () => {
 
             const result = await getAllScreeningsService();
 
-            expect(prisma.screening.findMany).toHaveBeenCalledWith({ where: { deletedAt: null } });
+            expect(prisma.screening.findMany).toHaveBeenCalledWith({
+                where: { deletedAt: null },
+                include: {
+                    movie: { select: { name: true, duration: true } },
+                    hall: { select: { name: true, type: true } }
+                },
+                orderBy: { startTime: 'asc' }
+            });
             expect(result).toEqual(screenings);
         });
     });

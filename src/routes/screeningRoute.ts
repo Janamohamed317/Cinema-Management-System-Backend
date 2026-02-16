@@ -1,8 +1,7 @@
 import express from "express"
-import { addScreening, deleteScreening, editScreening, getAllScreenings, restoreScreening } from "../controllers/screeningController";
+import { addScreening, deleteScreening, editScreening, getAllScreenings, restoreScreening, getScreeningDetails } from "../controllers/screeningController";
 import { verifyToken } from "../middlewares/verifyToken";
 import { requireMovieManagementAccess } from "../middlewares/rolesMiddleware";
-
 
 const router = express.Router()
 
@@ -15,5 +14,7 @@ router.put("/restore/:id", verifyToken, requireMovieManagementAccess, restoreScr
 router.put("/edit/:id", verifyToken, requireMovieManagementAccess, editScreening)
 
 router.get("/all", verifyToken, getAllScreenings)
+
+router.get("/:id", verifyToken, getScreeningDetails)
 
 export default router;
