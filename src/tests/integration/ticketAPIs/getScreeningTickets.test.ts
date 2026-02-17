@@ -1,10 +1,7 @@
 import request from "supertest";
-import crypto from "crypto";
 import app from "../../../app";
 import { prisma } from "../../../prismaClient/client";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
-import { saveHallToDb } from "../../testUtils/hallTestUtils";
-import { saveMovieToDb } from "../../testUtils/movieTestUtils";
 import { saveScreeningToDb } from "../../testUtils/screeningTestUtils";
 import { buildSeatData } from "../../testUtils/seatTestUtils";
 import { saveTicketToDb } from "../../testUtils/ticketTestUtils";
@@ -42,7 +39,6 @@ describe("Ticket Routes Integration Test - getScreeningTickets", () => {
     });
 
     beforeEach(async () => {
-
         const ticket = await saveTicketToDb(screeningId, seatId, userId);
         createdTicketIds.push(ticket.id);
     });

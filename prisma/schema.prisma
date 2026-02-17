@@ -121,6 +121,7 @@ model Ticket {
   userId      String
   seat        Seat         @relation(fields: [seatId], references: [id])
   seatId      String
+  price       Float
   createdAt   DateTime     @default(now())
   deletedAt   DateTime?
 

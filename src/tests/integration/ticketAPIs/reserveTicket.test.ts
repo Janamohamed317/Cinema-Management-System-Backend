@@ -4,20 +4,24 @@ import { prisma } from "../../../prismaClient/client";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { saveHallToDb } from "../../testUtils/hallTestUtils";
 import { saveMovieToDb } from "../../testUtils/movieTestUtils";
-import { saveScreeningToDb } from "../../testUtils/screeningTestUtils";
+import { buildScreeningDetails, saveScreeningToDb } from "../../testUtils/screeningTestUtils";
 import { buildSeatData } from "../../testUtils/seatTestUtils";
+import { HallType, ScreenType } from "@prisma/client";
+import { ScreeningDetails } from "../../../types/screening";
+import { getScreeningDetailsById } from "../../../services/screeningService";
+import { calculateTicketPrice } from "../../../utils/pricing";
 
 describe("Ticket Routes Integration Test - reserveTicket", () => {
     let token: string;
     let userId: string;
     let screeningId: string;
     let seatId: string;
-    let createdTicketIds: string[] = [];
     let createdScreeningIds: string[] = [];
     let createdSeatIds: string[] = [];
     let createdHallIds: string[] = [];
     let createdMovieIds: string[] = [];
     let createdUserIds: string[] = [];
+    let price: number
 
     beforeAll(async () => {
         const admin = await seedAdminAndGetToken();
@@ -30,6 +34,9 @@ describe("Ticket Routes Integration Test - reserveTicket", () => {
         createdScreeningIds.push(screening.id);
 
 
+        const screeningDetails = await getScreeningDetailsById(screeningId)
+        price = calculateTicketPrice(screeningDetails)
+
         createdHallIds.push(screening.hallId);
         createdMovieIds.push(screening.movieId);
 
@@ -41,7 +48,6 @@ describe("Ticket Routes Integration Test - reserveTicket", () => {
     });
 
     afterEach(async () => {
-
         await prisma.ticket.deleteMany({ where: { userId: userId } });
     });
 
@@ -57,35 +63,30 @@ describe("Ticket Routes Integration Test - reserveTicket", () => {
         const res = await request(app)
             .post("/api/ticket/reserve")
             .set("Authorization", `Bearer ${token}`)
-            .send({
-                screeningId,
-                seatIDs: [seatId]
-            });
+            .send({ screeningId, seatIDs: [seatId] });
 
         expect(res.status).toBe(201);
         expect(res.body.message).toBe("Tickets reserved successfully");
         expect(res.body.tickets.length).toBe(1);
         expect(res.body.tickets[0].userId).toBe(userId);
+        expect(res.body.tickets[0].price).toBe(price)
     });
 
     it("returns 409 if seat is already booked", async () => {
-
         await prisma.ticket.create({
             data: {
                 screeningId,
                 seatId,
                 userId,
-                status: "PAID"
+                status: "PAID",
+                price
             }
         });
 
         const res = await request(app)
             .post("/api/ticket/reserve")
             .set("Authorization", `Bearer ${token}`)
-            .send({
-                screeningId,
-                seatIDs: [seatId]
-            });
+            .send({ screeningId, seatIDs: [seatId] });
 
         expect(res.status).toBe(409);
         expect(res.body.message).toBe("Some seats are already booked");
@@ -95,10 +96,7 @@ describe("Ticket Routes Integration Test - reserveTicket", () => {
         const res = await request(app)
             .post("/api/ticket/reserve")
             .set("Authorization", `Bearer ${token}`)
-            .send({
-                screeningId: "invalid-uuid"
-            });
-
+            .send({ screeningId: "invalid-uuid" });
         expect(res.status).toBe(400);
     });
 });

@@ -1,9 +1,10 @@
 import { SeatStatus, TicketStatus } from "@prisma/client";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../utils/error";
 import { prisma } from "../prismaClient/client";
-import { findScreeningById } from "./screeningService";
+import { getScreeningDetailsById } from "./screeningService";
 import { validateTicketReservation, validateTicketId, validateScreeningId } from "../utils/validations/ticketValidation";
 import { TicketAddingBody } from "../types/ticket";
+import { calculateTicketPrice } from "../utils/pricing";
 
 export const reserveTicketService = async (data: TicketAddingBody, userId: string) => {
     const { error } = validateTicketReservation({ ...data, userId });
@@ -15,10 +16,9 @@ export const reserveTicketService = async (data: TicketAddingBody, userId: strin
         where: { seatId: { in: data.seatIDs }, deletedAt: null, screeningId: data.screeningId }
     })
 
-    const screening = await findScreeningById(data.screeningId)
-    if (!screening) {
-        throw new NotFoundError("Screening Not Found")
-    }
+    const screening = await getScreeningDetailsById(data.screeningId)
+    const price = calculateTicketPrice(screening)
+
     const seats = await prisma.seat.findMany({
         where: {
             id: { in: data.seatIDs },
@@ -39,7 +39,7 @@ export const reserveTicketService = async (data: TicketAddingBody, userId: strin
         const tickets = []
         for (const seatId of data.seatIDs) {
             const ticket = await tx.ticket.create({
-                data: { screeningId: data.screeningId, status: TicketStatus.PAID, userId: userId, seatId: seatId }
+                data: { screeningId: data.screeningId, status: TicketStatus.PAID, userId: userId, seatId: seatId, price }
             })
             tickets.push(ticket)
         }
