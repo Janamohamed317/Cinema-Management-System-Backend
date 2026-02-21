@@ -1,45 +1,59 @@
-import { SeatStatus, TicketStatus } from "@prisma/client";
+import { Seat, SeatStatus, Ticket, TicketStatus, TransactionStatus } from "@prisma/client";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../utils/error";
 import { prisma } from "../prismaClient/client";
 import { getScreeningDetailsById } from "./screeningService";
 import { validateTicketReservation, validateTicketId, validateScreeningId } from "../utils/validations/ticketValidation";
-import { TicketAddingBody } from "../types/ticket";
+import { TicketReservationRequest } from "../types/ticket";
 import { calculateTicketPrice } from "../utils/pricing";
+import { validatePayment } from "./transactionServices";
 
-export const reserveTicketService = async (data: TicketAddingBody, userId: string) => {
-    const { error } = validateTicketReservation({ ...data, userId });
+export const reserveTicketService = async (data: TicketReservationRequest, userId: string) => {
+    const { error } = validateTicketReservation(data.ticketData);
     if (error) {
         throw new BadRequestError(error.details[0].message);
     }
 
     const existingTickets = await prisma.ticket.findMany({
-        where: { seatId: { in: data.seatIDs }, deletedAt: null, screeningId: data.screeningId }
+        where: { seatId: { in: data.ticketData.seatIDs }, deletedAt: null, screeningId: data.ticketData.screeningId }
     })
 
-    const screening = await getScreeningDetailsById(data.screeningId)
-    const price = calculateTicketPrice(screening)
+    const screening = await getScreeningDetailsById(data.ticketData.screeningId)
 
     const seats = await prisma.seat.findMany({
         where: {
-            id: { in: data.seatIDs },
+            id: { in: data.ticketData.seatIDs },
             hallId: screening.hallId,
             deletedAt: null,
             status: SeatStatus.ACTIVE
         }
     })
 
-    if (existingTickets.length > 0) {
-        throw new ConflictError('Some seats are already booked')
-    }
-    if (seats.length !== data.seatIDs.length) {
-        throw new BadRequestError('Some seats are booked, deleted, under maintenance, or not in this hall')
-    }
+    checkSeats(existingTickets, seats, data.ticketData.seatIDs.length)
 
+    const price = calculateTicketPrice(screening)
+    const totalAmount = data.ticketData.seatIDs.length * price
+    const transaction = await prisma.transaction.create({
+        data: {
+            userId, paymentMethod: data.paymentData.paymentMethod, totalAmount,
+            status: TransactionStatus.PENDING
+        }
+    })
+
+    try {
+        validatePayment(data.paymentData)
+    } catch (error) {
+        await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: { status: TransactionStatus.REJECTED }
+        })
+        throw error
+    }
     return await prisma.$transaction(async (tx) => {
         const tickets = []
-        for (const seatId of data.seatIDs) {
+        await tx.transaction.update({ where: { id: transaction.id }, data: { status: TransactionStatus.COMPLETED } })
+        for (const seatId of data.ticketData.seatIDs) {
             const ticket = await tx.ticket.create({
-                data: { screeningId: data.screeningId, status: TicketStatus.PAID, userId: userId, seatId: seatId, price }
+                data: { screeningId: data.ticketData.screeningId, status: TicketStatus.PAID, userId: userId, seatId: seatId, price, transactionId: transaction.id }
             })
             tickets.push(ticket)
         }
@@ -106,7 +120,6 @@ export const cancelTicketService = async (ticketId: string, userId: string) => {
     })
 }
 
-
 export const checkTicketBeforeDeletionService = (startTime: Date) => {
     if (startTime < new Date()) {
         throw new BadRequestError('Cannot cancel ticket for past screening')
@@ -121,6 +134,15 @@ export const findUserTicketsService = async (userId: string) => {
         },
         orderBy: { createdAt: 'desc' }
     })
+}
+
+export const checkSeats = (existingTickets: Ticket[], seats: Seat[], reservedSeats: number) => {
+    if (existingTickets.length > 0) {
+        throw new ConflictError('Some seats are already booked')
+    }
+    if (seats.length !== reservedSeats) {
+        throw new BadRequestError('Some seats are deleted or under maintenance')
+    }
 }
 
 export const getTicketDetailsService = async (id: string) => {

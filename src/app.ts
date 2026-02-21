@@ -6,6 +6,7 @@ import hallPath from "./routes/hallRoute";
 import screeningPath from "./routes/screeningRoute";
 import seatPath from "./routes/seatRoute";
 import ticketPath from "./routes/ticketRoute";
+import transactionPath from "./routes/transactionRoute";
 import { errorHandler } from "./middlewares/errorHandler";
 
 
@@ -27,6 +28,8 @@ app.use('/api/screening', screeningPath);
 app.use('/api/seat', seatPath);
 
 app.use('/api/ticket', ticketPath);
+
+app.use('/api/transaction', transactionPath);
 
 app.use(errorHandler)
 

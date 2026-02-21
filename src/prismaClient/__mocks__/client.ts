@@ -44,6 +44,14 @@ export const prisma = {
         findUnique: jest.fn(),
         update: jest.fn(),
     },
+    transaction: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        updateMany: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+    },
     $transaction: jest.fn((callback) => callback(require("../../prismaClient/client").prisma)),
 }
 

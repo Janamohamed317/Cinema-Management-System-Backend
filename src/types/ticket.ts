@@ -1,3 +1,5 @@
+import { PaymentData } from "./transaction";
+
 export type TicketWithUserAndScreening = {
     user: {
         email: string;
@@ -19,4 +21,9 @@ export type TicketAddingBody = {
     screeningId: string
     userId: string
     seatIDs: string[]
+}
+
+export type TicketReservationRequest = {
+    ticketData: TicketAddingBody
+    paymentData: PaymentData
 }

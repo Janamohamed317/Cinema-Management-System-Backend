@@ -26,6 +26,7 @@ describe("Seat Routes Integration Test - getAvailableSeats", () => {
     });
 
     afterAll(async () => {
+        await prisma.transaction.deleteMany({ where: { userId: { in: [adminData.user.id, hallManagerData.user.id] } } });
         await prisma.user.deleteMany({ where: { id: { in: [adminData.user.id, hallManagerData.user.id] } } });
     });
 
