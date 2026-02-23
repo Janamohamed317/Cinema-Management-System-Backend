@@ -71,6 +71,7 @@ model User {
   deletedAt    DateTime?
   tickets      Ticket[]
   transactions Transaction[]
+  seatHolds    SeatHold[]
 
   @@index([deletedAt])
 }
@@ -100,14 +101,15 @@ model Hall {
 }
 
 model Screening {
-  id        String    @id @default(uuid())
-  hall      Hall      @relation(fields: [hallId], references: [id])
-  movie     Movie     @relation(fields: [movieId], references: [id])
+  id        String     @id @default(uuid())
+  hall      Hall       @relation(fields: [hallId], references: [id])
+  movie     Movie      @relation(fields: [movieId], references: [id])
   hallId    String
   movieId   String
   startTime DateTime
   deletedAt DateTime?
   tickets   Ticket[]
+  seatHolds SeatHold[]
 
   @@unique([hallId, startTime])
   @@index([deletedAt])
@@ -122,6 +124,7 @@ model Seat {
   createdAt  DateTime   @default(now())
   deletedAt  DateTime?
   tickets    Ticket[]
+  seatHolds  SeatHold[]
 
   @@unique([hallId, seatNumber])
   @@index([deletedAt])
@@ -157,4 +160,20 @@ model Transaction {
   paymentMethod PaymentMethod
 
   @@index([userId, status])
+}
+
+model SeatHold {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  seatId      String
+  seat        Seat      @relation(fields: [seatId], references: [id])
+  screeningId String
+  screening   Screening @relation(fields: [screeningId], references: [id])
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+
+  @@unique([screeningId, seatId])
+  @@index([screeningId])
+  @@index([expiresAt])
 }

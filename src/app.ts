@@ -8,12 +8,13 @@ import seatPath from "./routes/seatRoute";
 import ticketPath from "./routes/ticketRoute";
 import transactionPath from "./routes/transactionRoute";
 import { errorHandler } from "./middlewares/errorHandler";
-
+import helmet from "helmet";
 
 const app = express();
 
 app.use(express.json());
 
+app.use(helmet());
 
 app.use('/api/auth', authPath);
 
