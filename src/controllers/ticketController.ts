@@ -1,10 +1,10 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import asyncHandler from "express-async-handler";
 import { cancelAllTicketsForScreeningService, cancelTicketService, findUserTicketsService, getScreeningTicketsService, getTicketDetailsService, reserveTicketService } from "../services/ticketServices";
-import { TicketAddingBody } from "../types/ticket";
+import { TicketReservationRequest } from "../types/ticket";
 import { AuthRequest } from "../types/auth";
 
-export const reserveTicket = asyncHandler(async (req: AuthRequest<{}, {}, TicketAddingBody>, res: Response) => {
+export const reserveTicket = asyncHandler(async (req: AuthRequest<{}, {}, TicketReservationRequest>, res: Response) => {
     const tickets = await reserveTicketService(req.body, req.user!.id);
     res.status(201).json({ message: "Tickets reserved successfully", tickets });
 });

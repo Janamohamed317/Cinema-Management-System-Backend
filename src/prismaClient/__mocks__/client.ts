@@ -1,4 +1,4 @@
-export const prisma = {
+export const prisma: any = {
     hall: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
@@ -44,6 +44,14 @@ export const prisma = {
         findUnique: jest.fn(),
         update: jest.fn(),
     },
-    $transaction: jest.fn((callback) => callback(require("../../prismaClient/client").prisma)),
+    transaction: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        updateMany: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+    },
+    $transaction: jest.fn(async (callback) => callback(prisma)),
 }
 

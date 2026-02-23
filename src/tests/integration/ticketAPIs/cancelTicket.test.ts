@@ -8,7 +8,7 @@ import { saveMovieToDb } from "../../testUtils/movieTestUtils";
 import { saveScreeningToDb } from "../../testUtils/screeningTestUtils";
 import { buildSeatData } from "../../testUtils/seatTestUtils";
 import { saveTicketToDb } from "../../testUtils/ticketTestUtils";
-import { TicketStatus } from "@prisma/client";
+import { TicketStatus, TransactionStatus } from "@prisma/client";
 
 describe("Ticket Routes Integration Test - cancelTicket", () => {
     let token: string;
@@ -59,7 +59,7 @@ describe("Ticket Routes Integration Test - cancelTicket", () => {
     });
 
     afterAll(async () => {
-        await prisma.ticket.deleteMany({ where: { userId: { in: createdUserIds } } });
+        await prisma.transaction.deleteMany({ where: { userId } });
         await prisma.screening.deleteMany({ where: { id: { in: createdScreeningIds } } });
         await prisma.seat.deleteMany({ where: { id: { in: createdSeatIds } } });
         await prisma.movie.deleteMany({ where: { id: { in: createdMovieIds } } });

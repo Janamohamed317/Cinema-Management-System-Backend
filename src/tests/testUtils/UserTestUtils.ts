@@ -30,4 +30,18 @@ export const seedAdminAndGetToken = async () => {
 
 }
 
+export const seedUserAndGetToken = async () => {
+    const fakeUser = buildFakeUser();
+    const user = await prisma.user.create({
+        data: {
+            ...fakeUser,
+            password: await hashPassword(fakeUser.password),
+        },
+    });
+    const token = tokenCreation(user);
+    return { token, user };
+}
+
+
+
 
