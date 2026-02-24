@@ -1,8 +1,9 @@
 import http from "http";
 import app from "../app";
 import { Server } from "socket.io";
-import { getScreeningSnapshot } from "./screeningSnapshot";
-import { getHoldSeatSnapshot, manualSeatRelease } from "./socketSeatServices";
+import { holdSeatWithCheck, manualSeatRelease, getScreeningSnapshot, deleteHeldSeatsForUser, getHeldSeatsForUser } from "./socketSeatServices";
+import { setupSeatReleaseSubscriber } from "./redisSeatEvents";
+import { socketAuth } from './socketAuth';
 
 const server = http.createServer(app);
 
@@ -12,6 +13,9 @@ export const io = new Server(server, {
         credentials: true,
     },
 });
+
+io.use(socketAuth);
+setupSeatReleaseSubscriber(io)
 
 io.on("connection", (socket) => {
     console.log("socket connected:", socket.id);
@@ -35,17 +39,16 @@ io.on("connection", (socket) => {
         }
     });
 
-    socket.on("seat:hold", async ({ screeningId, seatId, userId }) => {
-        if (!screeningId || !seatId || !userId) {
+    socket.on("seat:hold", async ({ screeningId, seatId }) => {
+        if (!screeningId || !seatId) {
             socket.emit("seat:holdFailed", { seatId, reason: "INVALID" });
             return;
         }
-
+        const userId = socket.data.userId
         const roomName = `screening:${screeningId}`;
 
         try {
-            const hold = await getHoldSeatSnapshot(screeningId, seatId, userId);
-
+            const hold = await holdSeatWithCheck(screeningId, seatId, userId);
             socket.emit("seat:holdOk", {
                 seatId: hold.seatId,
                 expiresAt: hold.expiresAt,
@@ -57,29 +60,23 @@ io.on("connection", (socket) => {
                 expiresAt: hold.expiresAt,
             });
         } catch (err: any) {
-            const code = err?.code;
-
-            if (code === "P2002") {
-                socket.emit("seat:holdFailed", { seatId, reason: "TAKEN" });
-                return;
-            }
-
-            if (code === "P2003") {
-                socket.emit("seat:holdFailed", { seatId, reason: "INVALID" });
-                return;
-            }
-
             console.error("seat:hold error:", err);
+            const reason = err?.message || "SERVER_ERROR";
+
+            if (reason === "SEAT_HELD" || reason === "SEAT_BOOKED") {
+                socket.emit("seat:holdFailed", { seatId, reason });
+                return;
+            }
             socket.emit("seat:holdFailed", { seatId, reason: "SERVER_ERROR" });
         }
     });
 
-    socket.on("seat:release", async ({ screeningId, seatId, userId }) => {
-        if (!screeningId || !seatId || !userId) {
+    socket.on("seat:release", async ({ screeningId, seatId }) => {
+        if (!screeningId || !seatId) {
             socket.emit("seat:releaseFailed", { seatId, reason: "INVALID" });
             return;
         }
-
+        const userId = socket.data.userId
         const roomName = `screening:${screeningId}`;
 
         try {
@@ -98,8 +95,29 @@ io.on("connection", (socket) => {
         }
     });
 
-    socket.on("disconnect", (reason) => {
+    socket.on("disconnect", async (reason) => {
         console.log("socket disconnected:", socket.id, reason);
+
+        const userId = socket.data.userId;
+        if (!userId) return;
+
+        const holds = await getHeldSeatsForUser(userId)
+
+        if (holds.length === 0) return;
+
+        await deleteHeldSeatsForUser(userId);
+
+        const byScreening = new Map<string, string[]>();
+        for (const hold of holds) {
+            if (!byScreening.has(hold.screeningId)) {
+                byScreening.set(hold.screeningId, []);
+            }
+            byScreening.get(hold.screeningId)!.push(hold.seatId);
+        }
+
+        for (const [screeningId, seatIds] of byScreening.entries()) {
+            io.to(`screening:${screeningId}`).emit('seat:released', { seatIds });
+        }
     });
 });
 

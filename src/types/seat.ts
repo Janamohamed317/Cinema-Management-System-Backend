@@ -9,3 +9,8 @@ export type SeatEditingBody = {
     hallId?: string
     status?: SeatStatus
 }
+
+
+export type ReleasedSeat = {
+    screeningId: string; seatId: string
+};
