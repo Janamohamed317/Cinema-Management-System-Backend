@@ -1,6 +1,5 @@
 import { Request } from "express"
 import { Role } from "@prisma/client"
-import { Role as RoleType } from "@prisma/client"
 
 export type UserRegisterationBody = {
     email: string
@@ -19,4 +18,9 @@ export interface AuthRequest<P = any, ResBody = any, ReqBody = any, ReqQuery = a
         id: string,
         role: Role
     }
+}
+
+export type verifyEmailData = {
+    email: string,
+    otp: string
 }

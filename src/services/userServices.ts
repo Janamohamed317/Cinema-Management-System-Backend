@@ -107,3 +107,7 @@ export const signinUserService = async (data: { email: string; password: string 
 
     return user;
 }
+
+export const markUserAsVerified = async (email: string) => {
+    return await prisma.user.update({ where: { email }, data: { verified: true } })
+}

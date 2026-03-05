@@ -6,11 +6,11 @@ import { NotFoundError, BadRequestError, ConflictError } from "../utils/error"
 import { validateAddingSeat, validateSeatId, validateEditingSeat } from "../utils/validations/seatValidation"
 import { findHallById } from "./hallServices"
 
-export const findSeatBySeatNumber = async (seatNumber: number, hallId: string): Promise<Seat | null> => {
+export const findSeatBySeatNumber = async (seatNumber: string, hallId: string) => {
     return await prisma.seat.findFirst({ where: { seatNumber, hallId } })
 }
 
-export const findSeatById = async (id: string): Promise<Seat | null> => {
+export const findSeatById = async (id: string) => {
     return await prisma.seat.findFirst({ where: { id } })
 }
 
@@ -147,7 +147,8 @@ export const checkAssignedTickets = async (id: string) => {
         where: { seatId: id, deletedAt: null, screening: { startTime: { gt: new Date() } } },
         include: {
             user: { select: { email: true, username: true } },
-            screening: { select: { startTime: true } }
+            screening: { select: { startTime: true } },
+            seat: { select: { seatNumber: true } }
         }
     })
 }

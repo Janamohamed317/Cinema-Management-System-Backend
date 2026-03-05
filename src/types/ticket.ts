@@ -1,3 +1,4 @@
+import { Decimal } from "@prisma/client/runtime/library";
 import { PaymentData } from "./transaction";
 
 export type TicketWithUserAndScreening = {
@@ -7,7 +8,10 @@ export type TicketWithUserAndScreening = {
     }
     screening: {
         startTime: Date;
-    },
+    }
+    seat: {
+        seatNumber: string;
+    }
     id: string;
     createdAt: Date;
     deletedAt: Date | null;
@@ -15,6 +19,8 @@ export type TicketWithUserAndScreening = {
     screeningId: string;
     userId: string;
     seatId: string;
+    price: Decimal;
+    transactionId: string;
 }
 
 export type TicketAddingBody = {

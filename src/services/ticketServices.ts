@@ -3,10 +3,14 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from ".
 import { prisma } from "../prismaClient/client";
 import { getScreeningDetailsById } from "./screeningService";
 import { validateTicketReservation, validateTicketId, validateScreeningId } from "../utils/validations/ticketValidation";
-import { TicketReservationRequest } from "../types/ticket";
+import { TicketReservationRequest, TicketWithUserAndScreening } from "../types/ticket";
 import { calculateTicketPrice } from "../utils/pricing";
 import { validatePayment } from "./transactionServices";
 import { Decimal } from "@prisma/client/runtime/library";
+import { transporter } from "../utils/mailer";
+import { ticketConfirmationEmailTemplate } from "../utils/templates/ticketConfirmationEmailTemplate";
+import { ticketCancellationEmailTemplate } from "../utils/templates/ticketCancellationEmailTemplate";
+import { TicketCancellationEmailData } from "../types/emailData";
 
 export const reserveTicketService = async (data: TicketReservationRequest, userId: string) => {
     const { error } = validateTicketReservation(data.ticketData);
@@ -24,25 +28,27 @@ export const reserveTicketService = async (data: TicketReservationRequest, userI
         }
     })
 
-    const tickets: Ticket[] = []
     const ticketIDs: string[] = []
     await prisma.$transaction(async (tx) => {
         const existingTickets = await tx.ticket.findMany({
-            where: { seatId: { in: data.ticketData.seatIDs }, deletedAt: null, screeningId: data.ticketData.screeningId }
+            where: {
+                seatId: { in: data.ticketData.seatIDs }, deletedAt: null, screeningId: data.ticketData.screeningId,
+                status: { notIn: [TicketStatus.CANCELLED, TicketStatus.REFUNDED] }
+            }
         })
         const seats = await tx.seat.findMany({
             where: {
                 id: { in: data.ticketData.seatIDs }, hallId: screening.hallId,
                 deletedAt: null, status: SeatStatus.ACTIVE
+
             }
         })
         checkSeats(existingTickets, seats, data.ticketData.seatIDs.length)
 
         for (const seatId of data.ticketData.seatIDs) {
             const ticket = await tx.ticket.create({
-                data: { screeningId: data.ticketData.screeningId, status: TicketStatus.PENDING, userId: userId, seatId: seatId, price, transactionId: transaction.id }
+                data: { screeningId: data.ticketData.screeningId, status: TicketStatus.PENDING, userId, seatId, price, transactionId: transaction.id }
             })
-            tickets.push(ticket)
             ticketIDs.push(ticket.id)
         }
     })
@@ -62,7 +68,12 @@ export const reserveTicketService = async (data: TicketReservationRequest, userI
         await tx.ticket.updateMany({ where: { id: { in: ticketIDs } }, data: { status: TicketStatus.PAID } })
 
         const updatedTickets = await tx.ticket.findMany({
-            where: { id: { in: ticketIDs } }
+            where: { id: { in: ticketIDs } },
+            include: {
+                user: { select: { email: true, username: true } },
+                screening: { select: { startTime: true } },
+                seat: { select: { seatNumber: true } }
+            }
         })
 
         return updatedTickets
@@ -77,7 +88,11 @@ export const cancelAllTicketsForScreeningService = async (screeningId: string, u
 
     const tickets = await prisma.ticket.findMany({
         where: { screeningId, userId, deletedAt: null },
-        include: { screening: true }
+        include: {
+            screening: { include: { movie: true, hall: true } },
+            user: true,
+            seat: true
+        }
     })
 
     if (tickets.length === 0) {
@@ -106,6 +121,22 @@ export const cancelAllTicketsForScreeningService = async (screeningId: string, u
         }
     })
 
+    const totalRefundAmount = tickets.reduce((sum, ticket) => sum + ticket.price.toNumber(), 0);
+    const { startTime } = tickets[0].screening;
+
+    const emailData: TicketCancellationEmailData = {
+        email: tickets[0].user.email,
+        username: tickets[0].user.username,
+        movieTitle: tickets[0].screening.movie.name,
+        date: new Date(startTime).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+        time: new Date(startTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+        hallName: tickets[0].screening.hall.name,
+        seats: tickets.map(t => t.seat.seatNumber),
+        refundAmount: totalRefundAmount
+    };
+
+    await sendTicketCancellationEmail(emailData);
+
     return { cancelledCount: tickets.length }
 }
 
@@ -117,7 +148,11 @@ export const cancelTicketService = async (ticketId: string, userId: string) => {
 
     const ticket = await prisma.ticket.findUnique({
         where: { id: ticketId },
-        include: { screening: true }
+        include: {
+            screening: { include: { movie: true, hall: true } },
+            user: true,
+            seat: true
+        }
     })
 
     if (!ticket || ticket.deletedAt !== null) {
@@ -135,12 +170,27 @@ export const cancelTicketService = async (ticketId: string, userId: string) => {
             where: { id: ticketId },
             data: { deletedAt: new Date(), status: TicketStatus.REFUNDED }
         })
-        
+
         await tx.transaction.update({
             where: { id: ticket.transactionId },
             data: { totalAmount: { decrement: ticket.price.toNumber() } }
         })
     })
+
+    const { startTime } = ticket.screening;
+
+    const emailData: TicketCancellationEmailData = {
+        email: ticket.user.email,
+        username: ticket.user.username,
+        movieTitle: ticket.screening.movie.name,
+        date: new Date(startTime).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+        time: new Date(startTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+        hallName: ticket.screening.hall.name,
+        seats: [ticket.seat.seatNumber],
+        refundAmount: ticket.price.toNumber()
+    };
+
+    await sendTicketCancellationEmail(emailData);
 }
 
 export const checkTicketBeforeDeletionService = (startTime: Date) => {
@@ -177,4 +227,24 @@ export const getScreeningTicketsService = async (id: string) => {
     return await prisma.ticket.findMany({
         where: { screeningId: id, deletedAt: null }, include: { user: { select: { username: true, email: true } }, seat: true }
     })
+}
+
+export const sendTicketConfirmationEmail = async (tickets: TicketWithUserAndScreening[]) => {
+    const html = ticketConfirmationEmailTemplate(tickets)
+    await transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: tickets[0].user.email,
+        subject: "Ticket Reservation Confirmation",
+        html,
+    })
+}
+
+export const sendTicketCancellationEmail = async (data: TicketCancellationEmailData) => {
+    const html = ticketCancellationEmailTemplate(data);
+    await transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: data.email,
+        subject: "Ticket Cancellation Confirmation",
+        html,
+    });
 }
