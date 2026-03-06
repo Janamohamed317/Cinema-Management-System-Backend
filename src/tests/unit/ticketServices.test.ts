@@ -1,5 +1,5 @@
-import {reserveTicketService, cancelAllTicketsForScreeningService, cancelTicketService, checkTicketBeforeDeletionService, checkSeats}
- from "../../services/ticketServices";
+import { reserveTicketService, cancelAllTicketsForScreeningService, cancelTicketService, checkTicketBeforeDeletionService, checkSeats }
+    from "../../services/ticketServices";
 import { prisma } from "../../prismaClient/client";
 import { getScreeningDetailsById } from "../../services/screeningService";
 import { calculateTicketPrice } from "../../utils/pricing";
@@ -75,7 +75,9 @@ describe("Ticket Services Unit Tests", () => {
                 price: new Decimal(100),
                 transactionId: "tr1",
                 deletedAt: null,
-                screening: { startTime: new Date(Date.now() + 100000) }
+                screening: { startTime: new Date(Date.now() + 100000), movie: { name: "m1" }, hall: { name: "Hall 1" } },
+                user: { email: "user@email.com", username: "user1" },
+                seat: { seatNumber: 'A1' }
             });
 
             await cancelTicketService("t1", "u1");
@@ -103,7 +105,9 @@ describe("Ticket Services Unit Tests", () => {
                     id: "t1",
                     price: new Decimal(100),
                     transactionId: "tr1",
-                    screening: { startTime: new Date(Date.now() + 100000) }
+                    screening: { startTime: new Date(Date.now() + 100000), movie: { name: "m1" }, hall: { name: "Hall 1" } },
+                    user: { email: "user@email.com", username: "user1" },
+                    seat: { seatNumber: 'A1' }
                 }
             ]);
 
@@ -144,12 +148,12 @@ describe("Ticket Services Unit Tests", () => {
 
         it("completes transaction and creates tickets when payment succeeds", async () => {
             (validateTicketReservation as jest.Mock).mockReturnValue({ error: null });
-            (getScreeningDetailsById as jest.Mock).mockResolvedValue({hallId: "hall1",startTime: new Date()});
+            (getScreeningDetailsById as jest.Mock).mockResolvedValue({ hallId: "hall1", startTime: new Date() });
             (calculateTicketPrice as jest.Mock).mockReturnValue(100);
             (prisma.transaction.create as jest.Mock).mockResolvedValue({ id: "tr1" });
 
-            (prisma.ticket.findMany as jest.Mock).mockResolvedValue([]);  
-            (prisma.seat.findMany as jest.Mock).mockResolvedValue([{ id: "seat1" }]);  
+            (prisma.ticket.findMany as jest.Mock).mockResolvedValue([]);
+            (prisma.seat.findMany as jest.Mock).mockResolvedValue([{ id: "seat1" }]);
             (prisma.ticket.create as jest.Mock).mockResolvedValue({ id: "t1" });
             (prisma.ticket.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
 
@@ -157,7 +161,8 @@ describe("Ticket Services Unit Tests", () => {
 
             const result = await reserveTicketService({
                 ticketData: { seatIDs: ["seat1"], screeningId: "scr1" },
-                paymentData: {}} as any, "u1");
+                paymentData: {}
+            } as any, "u1");
 
             expect(result).toBeDefined();
             expect(prisma.$transaction).toHaveBeenCalled();

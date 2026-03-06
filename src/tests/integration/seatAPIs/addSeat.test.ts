@@ -5,13 +5,14 @@ import { buildSeatData, saveSeatToDb } from "../../testUtils/seatTestUtils";
 import { seedHallManagerAndGetToken } from "../../testUtils/hallTestUtils";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
 import { UserData } from "../../../types/user";
-import { saveHallToDb, buildHallData } from "../../testUtils/hallTestUtils";
+import { saveHallToDb } from "../../testUtils/hallTestUtils";
+import { Hall, HallType, ScreenType } from "@prisma/client";
 
 describe("Seat Routes Integration Test - addSeat", () => {
     let adminData: UserData;
     let hallManagerData: UserData;
-    let seatData: any;
-    let hall: any;
+    let seatData: { hallId: string, seatNumber: string }
+    let hall: any
 
     const roles = [
         { name: "Admin", token: () => adminData.token },

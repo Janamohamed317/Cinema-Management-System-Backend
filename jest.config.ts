@@ -8,7 +8,8 @@ const config: JestConfigWithTsJest = {
   testEnvironment: "node",
   testMatch: ["**/tests/**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json", "node"],
-  setupFiles: ["<rootDir>/jest.setup.ts"], 
+  setupFiles: ["<rootDir>/jest.setup.ts"],
+  globalTeardown: "<rootDir>/src/tests/teardown.ts",
 };
 
 export default config;

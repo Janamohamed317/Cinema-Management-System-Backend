@@ -2,15 +2,16 @@ import request from "supertest";
 import app from "../../../app";
 import { prisma } from '../../../prismaClient/client'
 import { buildFakeUser } from "../../testUtils/UserTestUtils";
+import * as authServices from "../../../services/authServices";
 
 describe("Auth Routes Integration Test - Signup", () => {
     const fakeUser = buildFakeUser()
     beforeEach(async () => {
+        jest.spyOn(authServices, "sendVerificationEmail").mockResolvedValue(undefined);
         await prisma.user.deleteMany({ where: { email: fakeUser.email } });
     });
 
     afterAll(async () => {
-        // await prisma.$disconnect(); // It's better not to disconnect in individual tests if reusing connection, but following valid pattern
         await prisma.user.deleteMany({ where: { email: fakeUser.email } });
     });
 
@@ -31,8 +32,7 @@ describe("Auth Routes Integration Test - Signup", () => {
                 .send(fakeUser);
 
             expect(res.status).toBe(201);
-            expect(res.body.newUser).toBeDefined();
-            expect(res.body.newUser.email).toBe(fakeUser.email);
+            expect(res.body.userId).toBeDefined();
             expect(res.body.token).toBeDefined();
         });
 

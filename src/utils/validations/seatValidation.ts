@@ -5,7 +5,7 @@ import { SeatAddingBody, SeatEditingBody } from "../../types/seat";
 export function validateAddingSeat(obj: SeatAddingBody) {
     const schema = Joi.object({
         hallId: Joi.string().uuid().required(),
-        seatNumber: Joi.number().required(),
+        seatNumber: Joi.string().required(),
     })
 
     return schema.validate(obj)

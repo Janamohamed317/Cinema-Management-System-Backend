@@ -75,7 +75,7 @@ describe("Employee Management Routes – Assign Role", () => {
 
             const res = await request(app)
                 .put("/api/EmployeeManagement/assign")
-                .send({ userId: signupRes.body.newUser.id, role: Role.HALL_MANAGER })
+                .send({ userId: signupRes.body.userId, role: Role.HALL_MANAGER })
                 .set("Authorization", `Bearer ${token}`);
 
             expect(res.status).toBe(403);

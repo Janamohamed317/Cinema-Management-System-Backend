@@ -10,6 +10,8 @@ import { buildInvalidPaymentData, buildPaymentData, saveTransactionToDb } from "
 import { PaymentData } from "../../../types/transaction";
 import { TicketAddingBody } from "../../../types/ticket";
 import { TicketStatus, TransactionStatus } from "@prisma/client";
+import * as authServices from "../../../services/authServices";
+
 
 describe("Ticket Routes Integration Test - reserveTicket", () => {
     let token: string;
@@ -24,6 +26,7 @@ describe("Ticket Routes Integration Test - reserveTicket", () => {
 
 
     beforeAll(async () => {
+        jest.spyOn(authServices, "sendVerificationEmail").mockResolvedValue(undefined);
         const admin = await seedAdminAndGetToken();
         token = admin.token;
         userId = admin.user.id;
@@ -113,13 +116,27 @@ describe("Ticket Routes Integration Test - reserveTicket", () => {
 
         expect(res.status).toBe(400);
         expect(res.body.message).toContain("Invalid card number");
-        
+
         const transaction = await prisma.transaction.findFirst({ where: { userId }, orderBy: { createdAt: 'desc' } });
         expect(transaction?.status).toBe(TransactionStatus.REJECTED);
-        
-        const tickets = await prisma.ticket.findMany({where: { transactionId: transaction?.id }});
+
+        const tickets = await prisma.ticket.findMany({ where: { transactionId: transaction?.id } });
         expect(tickets.length).toBeGreaterThan(0);
-        tickets.forEach(ticket => {expect(ticket.status).toBe(TicketStatus.CANCELLED);
+        tickets.forEach(ticket => {
+            expect(ticket.status).toBe(TicketStatus.CANCELLED);
         });
+    });
+
+    it("returns 403 if userId does not belong to token user", async () => {
+        const res = await request(app)
+            .post("/api/ticket/reserve")
+            .set("Authorization", `Bearer ${token}`)
+            .send({
+                ticketData: { ...ticketData, userId: crypto.randomUUID() },
+                paymentData
+            });
+
+        expect(res.status).toBe(403);
+        expect(res.body.message).toBe("Unauthorized Access");
     });
 });

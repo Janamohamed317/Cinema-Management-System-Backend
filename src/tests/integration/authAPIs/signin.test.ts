@@ -2,17 +2,25 @@ import request from "supertest";
 import app from "../../../app";
 import { prisma } from '../../../prismaClient/client'
 import { buildFakeUser } from "../../testUtils/UserTestUtils";
+import { markUserAsVerified } from "../../../services/userServices";
+import * as authServices from "../../../services/authServices";
+
 
 describe("Auth Routes Integration Test - Signin", () => {
-    const fakeUser = buildFakeUser()
-
+    const verifiedUser = buildFakeUser()
+    const unverifiedUser = buildFakeUser()
+    
     beforeAll(async () => {
-        await prisma.user.deleteMany({ where: { email: fakeUser.email } });
-        await request(app).post("/api/auth/signup").send(fakeUser);
+        jest.spyOn(authServices, "sendVerificationEmail").mockResolvedValue(undefined);
+        await prisma.user.deleteMany({ where: { email: verifiedUser.email } });
+        await request(app).post("/api/auth/signup").send(verifiedUser);
+        await request(app).post("/api/auth/signup").send(unverifiedUser);
+        await markUserAsVerified(verifiedUser.email)
     });
 
     afterAll(async () => {
-        await prisma.user.deleteMany({ where: { email: fakeUser.email } });
+        await prisma.user.deleteMany({ where: { email: verifiedUser.email } });
+        await prisma.user.deleteMany({ where: { email: unverifiedUser.email } });
     });
 
     describe("POST /api/auth/signin", () => {
@@ -37,7 +45,7 @@ describe("Auth Routes Integration Test - Signin", () => {
         it("should return 401 if password is incorrect", async () => {
             const res = await request(app)
                 .post("/api/auth/signin")
-                .send({ email: fakeUser.email, password: "WrongPassword123" });
+                .send({ email: verifiedUser.email, password: "WrongPassword123" });
 
             expect(res.status).toBe(401);
             expect(res.body.message).toBe("Email or Password is incorrect");
@@ -46,12 +54,20 @@ describe("Auth Routes Integration Test - Signin", () => {
         it("should signin successfully and return 200 with token", async () => {
             const res = await request(app)
                 .post("/api/auth/signin")
-                .send({ email: fakeUser.email, password: fakeUser.password });
-
+                .send({ email: verifiedUser.email, password: verifiedUser.password });
 
             expect(res.status).toBe(200);
             expect(res.body.token).toBeDefined();
             expect(res.body.userId).toBeDefined()
+        });
+
+
+        it("should return 403 if user is not verified", async () => {
+            const res = await request(app)
+                .post("/api/auth/signin")
+                .send({ email: unverifiedUser.email, password: unverifiedUser.password });
+
+            expect(res.status).toBe(403);
         });
     });
 });

@@ -4,7 +4,10 @@ import { UserRegisterationBody } from "../types/auth"
 import { hashPassword } from "../utils/hash"
 import { NotFoundError, BadRequestError, ConflictError, ForbiddenError, UnauthorizedError } from "../utils/error"
 import { validateUserCreation, validateLogin } from "../utils/validations/userValidations"
-import { comparePassword } from "../services/authServices"
+import { comparePassword, sendVerificationEmail } from "../services/authServices"
+import { generateOTP, saveOTP } from "./otpServices"
+import { VerificationEmailData } from "../types/emailData"
+import { verificationEmailTemplate } from "../utils/templates/verificationEmailTemplate"
 
 export const findUserByEmailOrUsername = async (email: string, username: string) => {
     return await prisma.user.findFirst({
@@ -46,8 +49,16 @@ export const signupUserService = async (data: UserRegisterationBody) => {
     if (user) {
         throw new ConflictError("User Already exists");
     }
-
-    return await CreateUser(data, Role.USER);
+    const otp = generateOTP()
+    await saveOTP(email, otp)
+    const emailData: VerificationEmailData = {
+        username,
+        otp
+    }
+    const newUser = await CreateUser(data, Role.USER);
+    const htmlContent = verificationEmailTemplate(emailData)
+    await sendVerificationEmail(email, "Email Verification for MovieNest", htmlContent)
+    return newUser
 }
 
 export const registerEmployeeService = async (data: UserRegisterationBody) => {
@@ -103,6 +114,17 @@ export const signinUserService = async (data: { email: string; password: string 
     const isMatched = await comparePassword(user, password);
     if (!isMatched) {
         throw new UnauthorizedError("Email or Password is incorrect");
+    }
+    if (!user.verified) {
+        const otp = generateOTP()
+        await saveOTP(user.email, otp)
+        const emailData: VerificationEmailData = {
+            username: user.username,
+            otp
+        }
+        const htmlContent = verificationEmailTemplate(emailData)
+        await sendVerificationEmail(user.email, "Email Verification for MovieNest", htmlContent)
+        throw new ForbiddenError("Account not verified. A verification email has been sent.")
     }
 
     return user;

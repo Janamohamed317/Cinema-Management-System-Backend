@@ -1,5 +1,7 @@
-import { addSeatService, editSeatService, findSeatById, findSeatBySeatNumber, isSeatDeleted, restoreSeatService, 
-    softDeleteSeatService, checkAssignedTickets, getAvailableSeats } from "../../services/seatServices"
+import {
+    addSeatService, editSeatService, findSeatById, findSeatBySeatNumber, isSeatDeleted, restoreSeatService,
+    softDeleteSeatService, checkAssignedTickets, getAvailableSeats
+} from "../../services/seatServices"
 import { findHallById } from "../../services/hallServices"
 import { prisma } from "../../prismaClient/client"
 import { SeatStatus, TicketStatus } from "@prisma/client"
@@ -17,11 +19,11 @@ describe("Seat Service Unit Tests", () => {
             const mockSeat = { id: "1", seatNumber: 1, hallId: "hall1", deletedAt: null }
                 ; (prisma.seat.findFirst as jest.Mock).mockResolvedValue(mockSeat)
 
-            const result = await findSeatBySeatNumber(1, "hall1")
+            const result = await findSeatBySeatNumber("A1", "hall1")
             expect(result).toEqual(mockSeat)
             expect(prisma.seat.findFirst).toHaveBeenCalledWith({
                 where: {
-                    seatNumber: 1,
+                    seatNumber: "A1",
                     hallId: "hall1"
                 }
             })
@@ -30,7 +32,7 @@ describe("Seat Service Unit Tests", () => {
         it("returns null when the seat does not exist", async () => {
             ; (prisma.seat.findFirst as jest.Mock).mockResolvedValue(null)
 
-            const result = await findSeatBySeatNumber(1, "hall2")
+            const result = await findSeatBySeatNumber("A1", "hall2")
             expect(result).toBeNull()
         })
     })
@@ -57,7 +59,7 @@ describe("Seat Service Unit Tests", () => {
     it("Creates a seat and returns it", async () => {
         const seatData = {
             hallId: "123e4567-e89b-12d3-a456-426614174000",
-            seatNumber: 5,
+            seatNumber: "A5",
         }
 
         const createdSeat = { id: "123e4567-e89b-12d3-a456-426614174001", ...seatData, status: SeatStatus.ACTIVE, createdAt: new Date(), deletedAt: null };
@@ -195,7 +197,7 @@ describe("Seat Service Unit Tests", () => {
         it("Not Deleted", () => {
             const seat = {
                 id: "seat1",
-                seatNumber: 1,
+                seatNumber: "A1",
                 hallId: "hall1",
                 status: SeatStatus.ACTIVE,
                 createdAt: new Date(),
@@ -209,7 +211,7 @@ describe("Seat Service Unit Tests", () => {
         it("Deleted", () => {
             const seat = {
                 id: "seat1",
-                seatNumber: 1,
+                seatNumber: "A1",
                 hallId: "hall1",
                 status: SeatStatus.ACTIVE,
                 createdAt: new Date(),
@@ -234,7 +236,8 @@ describe("Seat Service Unit Tests", () => {
                 where: { seatId: "seat1", deletedAt: null, screening: { startTime: { gt: expect.any(Date) } } },
                 include: {
                     user: { select: { email: true, username: true } },
-                    screening: { select: { startTime: true } }
+                    screening: { select: { startTime: true } },
+                    seat: { select: { seatNumber: true } }
                 }
             });
         });

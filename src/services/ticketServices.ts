@@ -176,7 +176,7 @@ export const cancelTicketService = async (ticketId: string, userId: string) => {
             data: { totalAmount: { decrement: ticket.price.toNumber() } }
         })
     })
-
+    
     const { startTime } = ticket.screening;
 
     const emailData: TicketCancellationEmailData = {

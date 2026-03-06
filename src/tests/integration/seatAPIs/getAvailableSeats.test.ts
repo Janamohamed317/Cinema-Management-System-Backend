@@ -32,8 +32,8 @@ describe("Seat Routes Integration Test - getAvailableSeats", () => {
 
     beforeEach(async () => {
         screening = await saveScreeningToDb(new Date(Date.now() + 100000).toISOString());
-        seat1 = await saveSeatToDb(buildSeatData(screening.hallId, 1));
-        seat2 = await saveSeatToDb(buildSeatData(screening.hallId, 2));
+        seat1 = await saveSeatToDb(buildSeatData(screening.hallId, "A1"));
+        seat2 = await saveSeatToDb(buildSeatData(screening.hallId, "A2"));
     });
 
     afterEach(async () => {

@@ -1,9 +1,7 @@
 import request from "supertest";
 import app from "../../../app";
 import { prisma } from "../../../prismaClient/client";
-import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
-import { saveHallToDb } from "../../testUtils/hallTestUtils";
-import { saveMovieToDb } from "../../testUtils/movieTestUtils";
+import { seedUserAndGetToken } from "../../testUtils/UserTestUtils";
 import { saveScreeningToDb } from "../../testUtils/screeningTestUtils";
 import { buildSeatData } from "../../testUtils/seatTestUtils";
 import { saveTicketToDb } from "../../testUtils/ticketTestUtils";
@@ -13,7 +11,6 @@ describe("Ticket Routes Integration Test - getUserTickets", () => {
     let userId: string;
     let screeningId: string;
     let seatId: string;
-    let createdTicketIds: string[] = [];
     let createdScreeningIds: string[] = [];
     let createdSeatIds: string[] = [];
     let createdHallIds: string[] = [];
@@ -21,7 +18,7 @@ describe("Ticket Routes Integration Test - getUserTickets", () => {
     let createdUserIds: string[] = [];
 
     beforeAll(async () => {
-        const admin = await seedAdminAndGetToken();
+        const admin = await seedUserAndGetToken();
         token = admin.token;
         userId = admin.user.id;
         createdUserIds.push(userId);
@@ -54,12 +51,10 @@ describe("Ticket Routes Integration Test - getUserTickets", () => {
     });
 
     it("successfully retrieves user tickets", async () => {
-
         await saveTicketToDb(screeningId, seatId, userId);
-
         const res = await request(app)
             .get("/api/ticket/my-tickets")
-            .set("Authorization", `Bearer ${token}`);
+            .set("Authorization", `Bearer ${token}`).send({ userId })
 
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
@@ -70,7 +65,7 @@ describe("Ticket Routes Integration Test - getUserTickets", () => {
     it("returns empty array if user has no tickets", async () => {
         const res = await request(app)
             .get("/api/ticket/my-tickets")
-            .set("Authorization", `Bearer ${token}`);
+            .set("Authorization", `Bearer ${token}`).send({ userId })
 
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);

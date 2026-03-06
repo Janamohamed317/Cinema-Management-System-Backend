@@ -3,12 +3,10 @@ import crypto from "crypto";
 import app from "../../../app";
 import { prisma } from "../../../prismaClient/client";
 import { seedAdminAndGetToken } from "../../testUtils/UserTestUtils";
-import { saveHallToDb } from "../../testUtils/hallTestUtils";
-import { saveMovieToDb } from "../../testUtils/movieTestUtils";
 import { saveScreeningToDb } from "../../testUtils/screeningTestUtils";
 import { buildSeatData } from "../../testUtils/seatTestUtils";
 import { saveTicketToDb } from "../../testUtils/ticketTestUtils";
-import { TicketStatus, TransactionStatus } from "@prisma/client";
+import { TicketStatus } from "@prisma/client";
 
 describe("Ticket Routes Integration Test - cancelTicket", () => {
     let token: string;
@@ -32,6 +30,7 @@ describe("Ticket Routes Integration Test - cancelTicket", () => {
 
         const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + 1);
+
         const screening = await saveScreeningToDb(futureDate.toISOString());
         screeningId = screening.id;
         createdScreeningIds.push(screening.id);
@@ -47,7 +46,6 @@ describe("Ticket Routes Integration Test - cancelTicket", () => {
     });
 
     beforeEach(async () => {
-
         const ticket = await saveTicketToDb(screeningId, seatId, userId);
         ticketId = ticket.id;
         createdTicketIds.push(ticket.id);
@@ -70,8 +68,7 @@ describe("Ticket Routes Integration Test - cancelTicket", () => {
     it("successfully cancels a ticket", async () => {
         const res = await request(app)
             .delete(`/api/ticket/cancel/${ticketId}`)
-            .set("Authorization", `Bearer ${token}`);
-
+            .set("Authorization", `Bearer ${token}`).send({ userId })
         expect(res.status).toBe(200);
         expect(res.body.message).toBe("Ticket cancelled successfully");
 
@@ -83,9 +80,19 @@ describe("Ticket Routes Integration Test - cancelTicket", () => {
     it("returns 404 if ticket not found", async () => {
         const res = await request(app)
             .delete(`/api/ticket/cancel/${crypto.randomUUID()}`)
-            .set("Authorization", `Bearer ${token}`);
+            .set("Authorization", `Bearer ${token}`).send({ userId })
 
         expect(res.status).toBe(404);
         expect(res.body.message).toBe("Ticket not found");
+    });
+
+    it("should return 403 if userId does not belong to token user", async () => {
+        const res = await request(app)
+            .delete(`/api/ticket/cancel/${ticketId}`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ userId: crypto.randomUUID() }); 
+
+        expect(res.status).toBe(403);
+        expect(res.body.message).toBe("Unauthorized Access");
     });
 });
