@@ -1,10 +1,12 @@
 import { Seat, SeatStatus, TicketStatus } from "@prisma/client"
 import { prisma } from "../prismaClient/client"
 import { SeatAddingBody, SeatEditingBody } from "../types/seat"
-import { TicketWithUserAndScreening } from "../types/ticket"
+import { TicketWithDetails } from "../types/ticket"
 import { NotFoundError, BadRequestError, ConflictError } from "../utils/error"
 import { validateAddingSeat, validateSeatId, validateEditingSeat } from "../utils/validations/seatValidation"
 import { findHallById } from "./hallServices"
+import { transporter } from "../utils/mailer"
+import { ticketRefundEmailTemplate } from "../utils/templates/ticketRefundEmailTemplate"
 
 export const findSeatBySeatNumber = async (seatNumber: string, hallId: string) => {
     return await prisma.seat.findFirst({ where: { seatNumber, hallId } })
@@ -147,13 +149,41 @@ export const checkAssignedTickets = async (id: string) => {
         where: { seatId: id, deletedAt: null, screening: { startTime: { gt: new Date() } } },
         include: {
             user: { select: { email: true, username: true } },
-            screening: { select: { startTime: true } },
+            screening: { select: { startTime: true, movie: { select: { name: true } } } },
             seat: { select: { seatNumber: true } }
         }
     })
 }
 
-export const sendRefundEmail = async (tickets: TicketWithUserAndScreening[]) => {
+export const sendRefundEmail = async (tickets: TicketWithDetails[]) => {
+    const ticketsByEmail = new Map<string, TicketWithDetails[]>();
+
     for (const ticket of tickets) {
+        const email = ticket.user?.email;
+
+        if (!ticketsByEmail.has(email)) {
+            ticketsByEmail.set(email, []);
+        }
+
+        ticketsByEmail.get(email)!.push(ticket);
     }
-}
+
+    const results = await Promise.allSettled(
+        Array.from(ticketsByEmail.entries()).map(([email, userTickets]) => {
+            const html = ticketRefundEmailTemplate(userTickets);
+
+            return transporter.sendMail({
+                from: process.env.EMAIL_FROM,
+                to: email,
+                subject: "Ticket Refund Confirmation",
+                html,
+            });
+        })
+    );
+
+    for (const result of results) {
+        if (result.status === "rejected") {
+            console.error("Failed to send refund email:", result.reason);
+        }
+    }
+};

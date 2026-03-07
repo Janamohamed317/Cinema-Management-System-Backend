@@ -1,6 +1,6 @@
-import { TicketWithUserAndScreening } from "../../types/ticket";
+import { TicketWithDetails } from "../../types/ticket";
 
-export const ticketConfirmationEmailTemplate = (tickets: TicketWithUserAndScreening[]) => {
+export const ticketConfirmationEmailTemplate = (tickets: TicketWithDetails[]) => {
     const { username } = tickets[0].user;
     const { startTime } = tickets[0].screening;
     const seats = tickets.map(t => t.seat.seatNumber);

@@ -3,7 +3,7 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from ".
 import { prisma } from "../prismaClient/client";
 import { getScreeningDetailsById } from "./screeningService";
 import { validateTicketReservation, validateTicketId, validateScreeningId } from "../utils/validations/ticketValidation";
-import { TicketReservationRequest, TicketWithUserAndScreening } from "../types/ticket";
+import { TicketAddingBody, TicketReservationRequest, TicketWithDetails } from "../types/ticket";
 import { calculateTicketPrice } from "../utils/pricing";
 import { validatePayment } from "./transactionServices";
 import { Decimal } from "@prisma/client/runtime/library";
@@ -71,10 +71,11 @@ export const reserveTicketService = async (data: TicketReservationRequest, userI
             where: { id: { in: ticketIDs } },
             include: {
                 user: { select: { email: true, username: true } },
-                screening: { select: { startTime: true } },
+                screening: { select: { startTime: true, movie: { select: { name: true } } } },
                 seat: { select: { seatNumber: true } }
             }
         })
+        await sendTicketConfirmationEmail(updatedTickets)
 
         return updatedTickets
     })
@@ -176,7 +177,7 @@ export const cancelTicketService = async (ticketId: string, userId: string) => {
             data: { totalAmount: { decrement: ticket.price.toNumber() } }
         })
     })
-    
+
     const { startTime } = ticket.screening;
 
     const emailData: TicketCancellationEmailData = {
@@ -229,7 +230,7 @@ export const getScreeningTicketsService = async (id: string) => {
     })
 }
 
-export const sendTicketConfirmationEmail = async (tickets: TicketWithUserAndScreening[]) => {
+export const sendTicketConfirmationEmail = async (tickets: TicketWithDetails[]) => {
     const html = ticketConfirmationEmailTemplate(tickets)
     await transporter.sendMail({
         from: process.env.EMAIL_FROM,

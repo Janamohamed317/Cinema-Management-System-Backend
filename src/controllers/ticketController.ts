@@ -6,7 +6,6 @@ import { AuthRequest } from "../types/auth";
 
 export const reserveTicket = asyncHandler(async (req: AuthRequest<{}, {}, TicketReservationRequest>, res: Response) => {
     const tickets = await reserveTicketService(req.body, req.user!.id);
-    await sendTicketConfirmationEmail(tickets)
     res.status(201).json({ message: "Tickets reserved successfully", tickets });
 });
 

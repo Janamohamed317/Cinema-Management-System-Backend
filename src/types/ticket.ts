@@ -1,13 +1,16 @@
 import { Decimal } from "@prisma/client/runtime/library";
 import { PaymentData } from "./transaction";
 
-export type TicketWithUserAndScreening = {
+export type TicketWithDetails = {
     user: {
         email: string;
         username: string;
     }
     screening: {
         startTime: Date;
+        movie: {
+            name: string;
+        }
     }
     seat: {
         seatNumber: string;
@@ -25,7 +28,6 @@ export type TicketWithUserAndScreening = {
 
 export type TicketAddingBody = {
     screeningId: string
-    userId: string
     seatIDs: string[]
 }
 

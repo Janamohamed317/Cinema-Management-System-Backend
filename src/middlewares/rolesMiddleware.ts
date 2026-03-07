@@ -34,18 +34,3 @@ export function requireHallManagementAccess(req: AuthRequest, res: Response, nex
     }
     return res.status(403).json({ message: "Not Authorized" });
 }
-
-
-export function verifyUserOwnership(req: AuthRequest, res: Response, next: NextFunction) {
-    const userIdFromBody = req.body?.ticketData?.userId || req.body?.userId;
-
-    if (!userIdFromBody) {
-        throw new BadRequestError("Please Login First")
-    }
-
-    if (userIdFromBody !== req.user!.id) {
-        throw new ForbiddenError("Unauthorized Access")
-    }
-
-    next();
-}

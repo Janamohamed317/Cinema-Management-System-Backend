@@ -5,7 +5,6 @@ export function validateTicketReservation(obj: TicketAddingBody) {
     const schema = Joi.object({
         screeningId: Joi.string().uuid().required(),
         seatIDs: Joi.array().items(Joi.string().uuid()).min(1).required(),
-        userId: Joi.string().uuid().required()
     });
 
     return schema.validate(obj);
