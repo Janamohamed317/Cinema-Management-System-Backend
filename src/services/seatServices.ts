@@ -1,4 +1,4 @@
-import { Seat, SeatStatus, TicketStatus } from "@prisma/client"
+import { Seat, SeatStatus, Ticket, TicketStatus } from "@prisma/client"
 import { prisma } from "../prismaClient/client"
 import { SeatAddingBody, SeatEditingBody } from "../types/seat"
 import { TicketWithDetails } from "../types/ticket"
@@ -187,3 +187,22 @@ export const sendRefundEmail = async (tickets: TicketWithDetails[]) => {
         }
     }
 };
+
+export const findRequestedSeats = async (seatIDs: string[], hallId: string) => {
+    return await prisma.seat.findMany({
+        where: {
+            id: { in: seatIDs }, hallId,
+            deletedAt: null, status: SeatStatus.ACTIVE
+
+        }
+    })
+}
+
+export const checkSeatsAvailabilty = (existingTickets: Ticket[], seats: Seat[], reservedSeats: number) => {
+    if (existingTickets.length > 0) {
+        throw new ConflictError('Some seats are already booked')
+    }
+    if (seats.length !== reservedSeats) {
+        throw new BadRequestError('Some seats are deleted or under maintenance')
+    }
+}

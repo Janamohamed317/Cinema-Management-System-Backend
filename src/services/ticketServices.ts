@@ -1,16 +1,17 @@
-import { Seat, SeatStatus, Ticket, TicketStatus, TransactionStatus } from "@prisma/client";
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../utils/error";
+import { Seat, TicketStatus, TransactionStatus } from "@prisma/client";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/error";
 import { prisma } from "../prismaClient/client";
 import { getScreeningDetailsById } from "./screeningService";
 import { validateTicketReservation, validateTicketId, validateScreeningId } from "../utils/validations/ticketValidation";
-import { TicketAddingBody, TicketReservationRequest, TicketWithDetails } from "../types/ticket";
+import { TicketReservationRequest, TicketWithDetails } from "../types/ticket";
 import { calculateTicketPrice } from "../utils/pricing";
-import { validatePayment } from "./transactionServices";
+import { createTransaction, validatePayment } from "./transactionServices";
 import { Decimal } from "@prisma/client/runtime/library";
 import { transporter } from "../utils/mailer";
 import { ticketConfirmationEmailTemplate } from "../utils/templates/ticketConfirmationEmailTemplate";
 import { ticketCancellationEmailTemplate } from "../utils/templates/ticketCancellationEmailTemplate";
 import { TicketCancellationEmailData } from "../types/emailData";
+import { checkSeatsAvailabilty, findRequestedSeats } from "./seatServices";
 
 export const reserveTicketService = async (data: TicketReservationRequest, userId: string) => {
     const { error } = validateTicketReservation(data.ticketData);
@@ -21,64 +22,23 @@ export const reserveTicketService = async (data: TicketReservationRequest, userI
     const screening = await getScreeningDetailsById(data.ticketData.screeningId)
     const price = calculateTicketPrice(screening)
     const totalAmount = data.ticketData.seatIDs.length * price
-    const transaction = await prisma.transaction.create({
-        data: {
-            userId, paymentMethod: data.paymentData.paymentMethod, totalAmount,
-            status: TransactionStatus.PENDING
-        }
-    })
+    const seats = await findRequestedSeats(data.ticketData.seatIDs, screening.hallId)
 
-    const ticketIDs: string[] = []
-    await prisma.$transaction(async (tx) => {
-        const existingTickets = await tx.ticket.findMany({
-            where: {
-                seatId: { in: data.ticketData.seatIDs }, deletedAt: null, screeningId: data.ticketData.screeningId,
-                status: { notIn: [TicketStatus.CANCELLED, TicketStatus.REFUNDED] }
-            }
-        })
-        const seats = await tx.seat.findMany({
-            where: {
-                id: { in: data.ticketData.seatIDs }, hallId: screening.hallId,
-                deletedAt: null, status: SeatStatus.ACTIVE
+    const transaction = await createTransaction(data.paymentData.paymentMethod, userId, totalAmount)
 
-            }
-        })
-        checkSeats(existingTickets, seats, data.ticketData.seatIDs.length)
-
-        for (const seatId of data.ticketData.seatIDs) {
-            const ticket = await tx.ticket.create({
-                data: { screeningId: data.ticketData.screeningId, status: TicketStatus.PENDING, userId, seatId, price, transactionId: transaction.id }
-            })
-            ticketIDs.push(ticket.id)
-        }
-    })
 
     try {
         validatePayment(data.paymentData)
     } catch (error) {
         await prisma.$transaction(async (tx) => {
             await tx.transaction.update({ where: { id: transaction.id }, data: { status: TransactionStatus.REJECTED } })
-            await tx.ticket.updateMany({ where: { id: { in: ticketIDs } }, data: { status: TicketStatus.CANCELLED } })
         })
         throw error
     }
-
-    return await prisma.$transaction(async (tx) => {
-        await tx.transaction.update({ where: { id: transaction.id }, data: { status: TransactionStatus.COMPLETED } })
-        await tx.ticket.updateMany({ where: { id: { in: ticketIDs } }, data: { status: TicketStatus.PAID } })
-
-        const updatedTickets = await tx.ticket.findMany({
-            where: { id: { in: ticketIDs } },
-            include: {
-                user: { select: { email: true, username: true } },
-                screening: { select: { startTime: true, movie: { select: { name: true } } } },
-                seat: { select: { seatNumber: true } }
-            }
-        })
-        await sendTicketConfirmationEmail(updatedTickets)
-
-        return updatedTickets
-    })
+    const ticketIDs = await createTickets(data, seats, userId, price, transaction.id)
+    const updatedTickets = await completeTicketReservation(transaction.id, ticketIDs);
+    await sendTicketConfirmationEmail(updatedTickets);
+    return updatedTickets;
 }
 
 export const cancelAllTicketsForScreeningService = async (screeningId: string, userId: string) => {
@@ -210,15 +170,6 @@ export const findUserTicketsService = async (userId: string) => {
     })
 }
 
-export const checkSeats = (existingTickets: Ticket[], seats: Seat[], reservedSeats: number) => {
-    if (existingTickets.length > 0) {
-        throw new ConflictError('Some seats are already booked')
-    }
-    if (seats.length !== reservedSeats) {
-        throw new BadRequestError('Some seats are deleted or under maintenance')
-    }
-}
-
 export const getTicketDetailsService = async (id: string) => {
     const ticket = await prisma.ticket.findFirst({ where: { id, deletedAt: null }, include: { screening: true, seat: true } })
     return ticket
@@ -249,3 +200,51 @@ export const sendTicketCancellationEmail = async (data: TicketCancellationEmailD
         html,
     });
 }
+
+export const createTickets = async (data: TicketReservationRequest, seats: Seat[], userId: string, price: number, transactionId: string) => {
+    const ticketIDs: string[] = []
+
+    await prisma.$transaction(async (tx) => {
+        const existingTickets = await tx.ticket.findMany({
+            where: {
+                seatId: { in: data.ticketData.seatIDs }, deletedAt: null, screeningId: data.ticketData.screeningId,
+                status: { notIn: [TicketStatus.CANCELLED, TicketStatus.REFUNDED] }
+            }
+        })
+        checkSeatsAvailabilty(existingTickets, seats, data.ticketData.seatIDs.length)
+
+        for (const seatId of data.ticketData.seatIDs) {
+            const ticket = await tx.ticket.create({
+                data: {
+                    screeningId: data.ticketData.screeningId, status: TicketStatus.PENDING, userId,
+                    seatId, price, transactionId
+                }
+            })
+            ticketIDs.push(ticket.id)
+        }
+    })
+    return ticketIDs
+}
+export const completeTicketReservation = async (transactionId: string, ticketIDs: string[]) => {
+    return await prisma.$transaction(async (tx) => {
+        await tx.transaction.update({
+            where: { id: transactionId },
+            data: { status: TransactionStatus.COMPLETED }
+        });
+        await tx.ticket.updateMany({
+            where: { id: { in: ticketIDs } },
+            data: { status: TicketStatus.PAID }
+        });
+
+        const updatedTickets = await tx.ticket.findMany({
+            where: { id: { in: ticketIDs } },
+            include: {
+                user: { select: { email: true, username: true } },
+                screening: { select: { startTime: true, movie: { select: { name: true } } } },
+                seat: { select: { seatNumber: true } }
+            }
+        });
+        
+        return updatedTickets;
+    });
+};

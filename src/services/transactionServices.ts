@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client"
+import { PaymentMethod, Role, TransactionStatus } from "@prisma/client"
 import { prisma } from "../prismaClient/client"
 import { PaymentData } from "../types/transaction"
 import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/error"
@@ -46,4 +46,13 @@ export const getTransactionById = async (id: string, userId: string, role: Role)
         throw new ForbiddenError("Not Authorized to view this transaction")
     }
     return transaction
+}
+
+export const createTransaction = async (paymentMethod: PaymentMethod, userId: string, totalAmount: number) => {
+    return await prisma.transaction.create({
+        data: {
+            userId, paymentMethod, totalAmount,
+            status: TransactionStatus.PENDING
+        }
+    })
 }
