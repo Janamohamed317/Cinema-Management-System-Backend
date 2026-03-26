@@ -26,16 +26,20 @@ export const reserveTicketService = async (data: TicketReservationRequest, userI
 
     const transaction = await createTransaction(data.paymentData.paymentMethod, userId, totalAmount)
 
+    const ticketIDs = await createTickets(data, seats, userId, price, transaction.id)
 
     try {
         validatePayment(data.paymentData)
     } catch (error) {
         await prisma.$transaction(async (tx) => {
             await tx.transaction.update({ where: { id: transaction.id }, data: { status: TransactionStatus.REJECTED } })
+            await tx.ticket.updateMany({
+                where: { id: { in: ticketIDs } },
+                data: { status: TicketStatus.CANCELLED, deletedAt: new Date() }
+            })
         })
         throw error
     }
-    const ticketIDs = await createTickets(data, seats, userId, price, transaction.id)
     const updatedTickets = await completeTicketReservation(transaction.id, ticketIDs);
     await sendTicketConfirmationEmail(updatedTickets);
     return updatedTickets;
@@ -77,7 +81,7 @@ export const cancelAllTicketsForScreeningService = async (screeningId: string, u
         for (const [transactionId, amount] of transactionUpdates) {
             await tx.transaction.update({
                 where: { id: transactionId },
-                data: { totalAmount: { decrement: amount.toNumber() } }
+                data: { totalAmount: { decrement: amount.toNumber() }, status: TransactionStatus.REFUNDED }
             })
         }
     })
@@ -244,7 +248,7 @@ export const completeTicketReservation = async (transactionId: string, ticketIDs
                 seat: { select: { seatNumber: true } }
             }
         });
-        
+
         return updatedTickets;
     });
 };

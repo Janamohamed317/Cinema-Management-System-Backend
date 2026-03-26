@@ -4,13 +4,13 @@ import { reserveTicket, cancelTicket, cancelAllTicketsForScreening, getUserTicke
 
 const router = express.Router()
 
+router.get("/my-tickets", verifyToken, getUserTicketsController)
+
 router.post("/reserve", verifyToken, reserveTicket)
 
 router.delete("/cancel/:id", verifyToken, cancelTicket)
 
 router.delete("/cancel-screening/:screeningId", verifyToken, cancelAllTicketsForScreening)
-
-router.get("/my-tickets", verifyToken, getUserTicketsController)
 
 router.get("/screening/:id", verifyToken, getScreeningTickets)
 
