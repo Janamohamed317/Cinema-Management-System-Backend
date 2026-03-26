@@ -10,9 +10,15 @@ export const addMinutes = (date: Date, minutes: number) => {
   return new Date(date.getTime() + minutes * 60000);
 };
 
-export const findScreeningsInHall = async (hallId: string) => {
+export const findScreeningsInHall = async (hallId: string, startDate: Date) => {
+  const from = new Date(startDate);
+  from.setHours(0, 0, 0, 0);
+
+  const to = new Date(startDate);
+  to.setHours(23, 59, 59, 999);
+
   const screenings = await prisma.screening.findMany({
-    where: { hallId, deletedAt: null },
+    where: { hallId, deletedAt: null, startTime: { gte: from, lte: to } },
     include: { movie: { select: { duration: true } } },
   })
 
@@ -70,7 +76,7 @@ export const createScreeningService = async (data: ScreeningAddingBody) => {
   }
 
   const endDate = addMinutes(startDate, foundMovie.duration + 30);
-  const screenings = await findScreeningsInHall(hallId)
+  const screenings = await findScreeningsInHall(hallId, startDate)
   const conflict = checkOverlapping(screenings, endDate, startDate)
 
   if (conflict) {
@@ -145,8 +151,12 @@ export const findMovieScreening = async (id: string) => {
 }
 
 export const getScreeningDetailsById = async (id: string) => {
-  const screening = await prisma.screening.findUnique({where: { id },include: {movie: { select: { name: true, duration: true } },
-      hall: { select: { name: true, type: true, screenType: true } }}})
+  const screening = await prisma.screening.findUnique({
+    where: { id }, include: {
+      movie: { select: { name: true, duration: true } },
+      hall: { select: { name: true, type: true, screenType: true } }
+    }
+  })
 
   if (!screening || screening.deletedAt !== null) {
     throw new NotFoundError("Screening not found")

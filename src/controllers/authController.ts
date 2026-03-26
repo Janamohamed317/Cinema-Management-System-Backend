@@ -9,8 +9,7 @@ import { BadRequestError } from "../utils/error";
 
 export const signup = asyncHandler(async (req: Request<{}, {}, UserRegisterationBody>, res: Response) => {
     const newUser = await signupUserService(req.body)
-    const token = tokenCreation(newUser);
-    res.status(201).json({ userId: newUser.id, token, message: "Verification Email Sent" });
+    res.status(201).json({ userId: newUser.id, message: "Verification Email Sent" });
 });
 
 export const signin = asyncHandler(async (req: Request<{}, {}, UserSigninBody>, res: Response) => {

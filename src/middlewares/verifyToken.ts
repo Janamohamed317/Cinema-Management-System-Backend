@@ -33,7 +33,7 @@ export function verifyToken(req: AuthRequest, res: Response, next: NextFunction)
 
         next();
     } catch {
-        return res.status(400).json({ message: "Invalid Token" });
+        return res.status(401).json({ message: "Invalid Token" });
     }
 }
 

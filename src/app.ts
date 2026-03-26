@@ -9,6 +9,7 @@ import ticketPath from "./routes/ticketRoute";
 import transactionPath from "./routes/transactionRoute";
 import { errorHandler } from "./middlewares/errorHandler";
 import helmet from "helmet";
+import cors from "cors";
 
 const app = express();
 
@@ -16,9 +17,14 @@ app.use(express.json());
 
 app.use(helmet());
 
+app.use(cors({
+    origin: "*",
+    credentials: true
+}))
+
 app.use('/api/auth', authPath);
 
-app.use('/api/EmployeeManagement', EmployeeManagementPath);
+app.use('/api/employee-management', EmployeeManagementPath);
 
 app.use('/api/hall', hallPath);
 
