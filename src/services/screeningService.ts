@@ -5,6 +5,9 @@ import { NotFoundError, BadRequestError, ConflictError } from "../utils/error";
 import { validateScreeningData, validatScreeningId, validateEditScreeningData } from "../utils/validations/screeningValidation";
 import { findMovieById } from "./movieServices";
 import { findHallById } from "./hallServices";
+import { redisClient } from "../utils/redisClient";
+
+const SCREENINGS_CACHE_EXPIRY_SECONDS = 21600;
 
 export const addMinutes = (date: Date, minutes: number) => {
   return new Date(date.getTime() + minutes * 60000);
@@ -83,7 +86,9 @@ export const createScreeningService = async (data: ScreeningAddingBody) => {
     throw new BadRequestError("can't assign in that time slot")
   }
 
-  return await prisma.screening.create({ data })
+  await prisma.screening.create({ data })
+  await redisClient.del("allScreenings")
+  return
 }
 
 export const softDeleteScreeningService = async (id: string) => {
@@ -96,6 +101,7 @@ export const softDeleteScreeningService = async (id: string) => {
   if (result.count === 0) {
     throw new NotFoundError("Screening Not Found");
   }
+  await redisClient.del("allScreenings")
 }
 
 export const restoreScreeningService = async (id: string) => {
@@ -108,6 +114,8 @@ export const restoreScreeningService = async (id: string) => {
   if (result.count === 0) {
     throw new NotFoundError("Screening Not Found");
   }
+  await redisClient.del("allScreenings")
+  return
 }
 
 export const isScreeningDeleted = (screening: Screening) => {
@@ -115,13 +123,19 @@ export const isScreeningDeleted = (screening: Screening) => {
 }
 
 export const getAllScreeningsService = async () => {
-  return await prisma.screening.findMany({
+  const cachedScreenings = await redisClient.get("allScreenings")
+  if (cachedScreenings) {
+    return JSON.parse(cachedScreenings)
+  }
+  const screenings = await prisma.screening.findMany({
     where: { deletedAt: null }, include: {
       movie: { select: { name: true, duration: true } },
       hall: { select: { name: true, type: true } }
     },
     orderBy: { startTime: 'asc' }
   })
+  await redisClient.setex("allScreenings", SCREENINGS_CACHE_EXPIRY_SECONDS, JSON.stringify(screenings))
+  return screenings;
 }
 
 export const editScreeningService = async (data: ScreeningEditingBody, id: string) => {
@@ -135,7 +149,9 @@ export const editScreeningService = async (data: ScreeningEditingBody, id: strin
     throw new NotFoundError("Screening not found")
   }
 
-  return await prisma.screening.update({ where: { id, deletedAt: null }, data })
+  await prisma.screening.update({ where: { id, deletedAt: null }, data })
+  await redisClient.del("allScreenings")
+  return
 }
 
 export const findScreeningById = async (id: string) => {

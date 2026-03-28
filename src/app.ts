@@ -10,8 +10,11 @@ import transactionPath from "./routes/transactionRoute";
 import { errorHandler } from "./middlewares/errorHandler";
 import helmet from "helmet";
 import cors from "cors";
+import { authLimiter, globalLimiter } from "./utils/limiter";
 
 const app = express();
+
+app.use(globalLimiter);
 
 app.use(express.json());
 
@@ -22,7 +25,7 @@ app.use(cors({
     credentials: true
 }))
 
-app.use('/api/auth', authPath);
+app.use('/api/auth', authLimiter, authPath);
 
 app.use('/api/employee-management', EmployeeManagementPath);
 

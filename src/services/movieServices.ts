@@ -3,6 +3,9 @@ import { prisma } from "../prismaClient/client";
 import { MovieAddingBody, MovieEditingBody } from "../types/movie";
 import { NotFoundError, BadRequestError, ConflictError } from "../utils/error";
 import { validateAddingMovie, validateMovieId, validateEditingMovie } from "../utils/validations/movieValidation";
+import { redisClient } from "../utils/redisClient";
+
+const MOVIES_CACHE_EXPIRY_SECONDS = 43200;
 
 export const findMovieByName = async (name: string): Promise<Movie | null> => {
     return await prisma.movie.findFirst({ where: { name } })
@@ -27,7 +30,9 @@ export const addMovieService = async (data: MovieAddingBody) => {
         throw new ConflictError("Movie with the same name already exists.");
     }
 
-    return await prisma.movie.create({ data });
+    await prisma.movie.create({ data });
+    await redisClient.del("allMovies")
+    return
 }
 
 export const softDeleteMovieService = async (id: string) => {
@@ -44,6 +49,8 @@ export const softDeleteMovieService = async (id: string) => {
     if (result.count === 0) {
         throw new NotFoundError("Movie not found");
     }
+    await redisClient.del("allMovies")
+    return
 }
 
 export const editMovieService = async (id: string, data: MovieEditingBody) => {
@@ -68,10 +75,12 @@ export const editMovieService = async (id: string, data: MovieEditingBody) => {
             throw new ConflictError("Movie with this name already exists")
         }
     }
-    return await prisma.movie.update({
+    await prisma.movie.update({
         where: { id },
         data
     });
+    await redisClient.del("allMovies")
+    return
 }
 
 export const restoreMovieService = async (id: string) => {
@@ -93,12 +102,20 @@ export const restoreMovieService = async (id: string) => {
         where: { id },
         data: { deletedAt: null },
     });
+    await redisClient.del("allMovies")
+    return
 }
 
 export const getAllMoviesService = async () => {
-    return await prisma.movie.findMany({
+    const cachedMovies = await redisClient.get("allMovies")
+    if (cachedMovies) {
+        return JSON.parse(cachedMovies)
+    }
+    const movies = await prisma.movie.findMany({
         where: { deletedAt: null },
     });
+    await redisClient.setex("allMovies", MOVIES_CACHE_EXPIRY_SECONDS, JSON.stringify(movies))
+    return movies;
 }
 
 export const isMovieDeleted = (movie: Movie): boolean => {
